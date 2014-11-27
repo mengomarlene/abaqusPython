@@ -3,7 +3,7 @@ import toolbox
 # tested on windows only
 # the abaqus command must be reachable from command line from anywhere
 extToKeep = ['inp','odb','msg','rpy','cae','txt','sta','dat']
-defaultdirs = ['tryPython','tryInp']
+defaultdirs = ['..\myModels\tryPython','tryInp']
 
 sys.path.append(os.path.dirname(os.getcwd()))
 
