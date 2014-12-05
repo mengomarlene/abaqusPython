@@ -58,7 +58,7 @@ class Interactions:
                 elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
                 elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)
                 if self.Cohesive:
-                    if self.useCoheDefault: contact.CohesiveBehavior()
+                    if self.useCoheDefault: contact.CohesiveBehavior(eligibility=SPECIFIED)
                     else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ),eligibility=SPECIFIED)
                 #elif not self.allowSep: contact.normalBehavior.setValues(allowSeparation=OFF)
             if self.Cohesive:        
@@ -82,7 +82,7 @@ class Interactions:
             else: raise Exception('unknown interaction name')
             if self.Cohesive:
                 self.abqModel.interactions[iName].setValues(sliding=FINITE, enforcement=NODE_TO_SURFACE)
-                if self.useCoheDefault: contact.CohesiveBehavior()
+                if self.useCoheDefault: contact.CohesiveBehavior(eligibility=SPECIFIED)
                 else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ),eligibility=SPECIFIED, stiffnessBehavior=LINEAR, constraintEnforcementMethod=PENALTY)
             else:
                 #if not self.allowSep: contact.normalBehavior.setValues(allowSeparation=OFF)

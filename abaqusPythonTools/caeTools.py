@@ -101,8 +101,8 @@ def getParameters(_p={}):
     param['internalPressure'] = None
     #JOB
     param['modelName'] = 'defaultName'
-    param['scratchDir'] = 'D:/ABAQUS_V613_Work/MarleneMengoni'
-    param['numCpus'] = 8
+    param['scratchDir'] = '.'
+    param['numCpus'] = 1
     param['saveCaeFile'] = True
     #
     param.update(_p)
@@ -901,8 +901,7 @@ def analysisWithRectangles(p):
         upperFace.append(instances[rec].faces.findAt((upperFacePoint,)))
         myAssembly.seedPartInstance(regions=(instances[rec],), size=.3*p['length']/p['nbParts'])
         myAssembly.generateMesh(regions=(instances[rec],))
-        elType = mesh.ElemType(C3D8R, hourglassControl=ENHANCED)
-        myAssembly.setElementType((instances[rec].cells,), (elType,))
+        myAssembly.setElementType((instances[rec].cells,), (p['elemType'],))
     if p['nbParts']>1:
         ## CONSTRAINTS - same for all interfaces!!
         for nb in range(1,p['nbParts']):
