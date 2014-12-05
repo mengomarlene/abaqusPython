@@ -2,7 +2,6 @@ import abaqusPythonTools.odbTools as odbTools
 import abaqusPythonTools.extractors as ext
 import os
 
-
 def containedDisplExtractors(odbName):    
     keysToWrite = ['radialDisp_intFace','resForce_intFace','radialDisp_outFace','resForce_outFace','time']
     valuesToWrite = dict.fromkeys(keysToWrite, None)
@@ -31,21 +30,22 @@ def containedDisplExtractors(odbName):
         myOdb.close()
 
 def optiStiffnessExtractors(odbName):    
-
-    print "running postPro on %s"%(odbName)
     myOdb = odbTools.openOdb(odbName)
     time = ext.getTime(myOdb)
     extDispl = ext.getU_3(myOdb, 'outerFace')
     extDiplsList = [displ[0] for displ in extDispl]
     outForce = ext.getRF_3(myOdb,'outerFace')
     extForceList = [force[0] for force in outForce]
-    eMax = max(extDiplsList)
-    import numpy as np
-    extShort = np.linspace(0.,eMax,200)
-    shortForce = np.interp(extShort, extDiplsList, extForceList)
-    n0=5
-    linearExt = extShort[n0:]
-    linearLoad = shortForce[n0:]
-    zI = np.polyfit(linearExt, linearLoad, 1)
-    odbTools.writeValuesOpti(zI[0])
+    stiffness= 0.
+    if abs(extForceList[-1])>1e-8 and abs(extForceList[-1])<1e8:stiffness=extForceList[-1]/extDiplsList[-1]
+    odbTools.writeValuesOpti(stiffness)
+    # eMax = max(extDiplsList)
+    # import numpy as np
+    # extShort = np.linspace(0.,eMax,200)
+    # shortForce = np.interp(extShort, extDiplsList, extForceList)
+    # n0=5
+    # linearExt = extShort[n0:]
+    # linearLoad = shortForce[n0:]
+    # zI = np.polyfit(linearExt, linearLoad, 1)
+    # odbTools.writeValuesOpti(zI[0])
     myOdb.close()

@@ -10,7 +10,7 @@ import os, math
 def getParameters(_p={}):
     param = {}
     # MODEL
-    fileName = 'D:/myWork/FEModels/beanShapedAnnulus/modelBuilt/multiLayer3D.inp'
+    fileName = 'D:/myWork/FEModels/myModels/beanShapedAnnulus/modelBuilt/multiLayer3D.inp'
     fileName.replace('/',os.sep)
     param['inpFile'] = fileName
     #most inner part = part lam_8 --> instance_8, section_8, mat_8

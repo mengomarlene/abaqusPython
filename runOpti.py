@@ -1,43 +1,42 @@
-import parameterFitFinal
+import parameterFit
 import os
 
-dir = os.path.join(os.getcwd(),'2DModels')
-subdir = os.path.join(dir,'tt0101nobridgesFull')
-dataFile = os.path.join(subdir,'tt01MeasuredDisplacement.ascii')
-feModel = os.path.join(subdir,'optiCustomCoheFNeoHooke.py')
-p0 = [.5,.5]#,0.]#Knn,Ktt,friction coef
-bounds = [(1e-2,1e2),(1e-2,1e2)]#,(0.,1.)]
+expDir = dir = os.path.join(os.getcwd(),'HexModelsOfRadialTests')
+feModelDir = os.path.join(expDir,'cohesiveOpti')
 
 optiParam = {}
 optiParam['maxEval'] = 40 # max number of function evaluation in the optimisation process !!there is more than one evalutation per iteration as the jacobian as to be computed!!
-optiParam['epsfcn'] = .0001 # step taken to compute the jacobian by a finite difference method
-optiParam['ftol'] = 1e-8 # tolerance on the function value
+optiParam['epsfcn'] = .1 # step taken to compute the jacobian by a finite difference method
+optiParam['ftol'] = 1e-6 # tolerance on the function value
 
-#read data file
-expData = [[],[]]
-with open(dataFile, 'r') as file:
-    lines = file.readlines()
-    for line in lines: 
-        lineData = map(float,line.split())
-        expData[0].append(lineData[0]/2.)
-        expData[1].append(lineData[1]/2.)
-    #expData = zip(*(map(float,line.split()) for line in file.readlines()))
+# coheValues = (1.,10.,100.,1000.)
+# output = list()
+# for value in coheValues:
+    # res = parameterFitParr_LMA.residuals([value,value], feModelDir, expDir, modelType='Int')
+    # output.append(res)
+# minValue = coheValues[output.index(min(output))]
+# p0 = [minValue,minValue]
+# bounds = [(minValue/2.,minValue*5.),(minValue/2.,minValue*5.)]
+
+coheValue = 0.24/(3.98/10.5) #mean testing length = 3.98, mean nb of lamellae = 10.5; C10 = 0.04 ==> E = .24
+p0 = [coheValue,coheValue]
+bounds = [(coheValue/100.,coheValue*5.),(coheValue/100.,coheValue*5.)]
 
 #perform optimisation
-p,fVal,info = parameterFitFinal.main(p0, expData, feModel, options=optiParam, pBounds=bounds)
+p,fVal,info = parameterFitParr_LMA.main(p0, expDir, feModelDir, pBounds=bounds,options=optiParam, modelType='Int')
 
 #plot results
-import numpy as np
-if bounds is None:
-    nx = len(fVal)
-    xi = np.linspace(min(expData[0]), max(expData[0]), nx)
-    intExp = parameterFitFinal.interpolateResults(expData,xi)
-    feData = [xi,intExp+fVal]
-else:
-    feData = parameterFitFinal.computeFEData(p,feModel)
-ss_err = (np.array(fVal)**2).sum()
-ss_tot = ((np.array(expData[1])-np.array(expData[1]).mean())**2).sum()
-rsquared = 1-(ss_err/ss_tot)
-print info
-print "rsquare fit : ",rsquared
-parameterFitFinal.plotValues(feData, feModel, expData)
+# import numpy as np
+# if bounds is None:
+    # nx = len(fVal)
+    # xi = np.linspace(min(expData[0]), max(expData[0]), nx)
+    # intExp = parameterFitFinal.interpolateResults(expData,xi)
+    # feData = [xi,intExp+fVal]
+# else:
+    # feData = parameterFitFinal.computeFEData(p,feModel)
+# ss_err = (np.array(fVal)**2).sum()
+# ss_tot = ((np.array(expData[1])-np.array(expData[1]).mean())**2).sum()
+# rsquared = 1-(ss_err/ss_tot)
+# print info
+# print "rsquare fit : ",rsquared
+# parameterFitFinal.plotValues(feData, feModel, expData)

@@ -32,12 +32,18 @@ def getNCoord(odb, setName, sysC=None):
         if 'INSTANCE'  in setName:
             iName = setName.split('.')[0]
             iSetName = setName.split('.')[1]
-            set = odb.rootAssembly.instances[iName].nodeSets[iSetName.upper()]
+            try:
+                set = odb.rootAssembly.instances[iName].nodeSets[iSetName]
+            except:
+                set = odb.rootAssembly.instances[iName].nodeSets[iSetName.upper()]
             nodes = set.nodes#??[0]
             for node in nodes:
                 initialCoords.append(getNodeCoord(node, sysC=sysC))
-        else:    
-            set = odb.rootAssembly.nodeSets[setName.upper()]#setName is a string
+        else:
+            try:
+                set = odb.rootAssembly.nodeSets[setName]#setName is a string
+            except:
+                set = odb.rootAssembly.nodeSets[setName.upper()]#setName is a string
             nodes = set.nodes
             for part in range(len(set.nodes)): # nb of part in the nodeSet != total nb of parts!!
                 for node in nodes[part]:
@@ -76,7 +82,10 @@ def getNodeCoord(node, sysC=None):
 #-----------------------------------------------------
 def getU(odb,setName,sysC=None):
     try:
-        nod = odb.rootAssembly.nodeSets[setName.upper()].nodes[0]
+        try:
+            nod = odb.rootAssembly.nodeSets[setName].nodes[0]
+        except:
+            nod = odb.rootAssembly.nodeSets[setName.upper()].nodes[0]
     except:
         nod = setName.nodes[0]
     if len(nod) == 1: 

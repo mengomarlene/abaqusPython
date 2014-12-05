@@ -32,7 +32,7 @@ def runModel(p,modelScript,modelsDir):
     os.chdir(workspace)
     if verbose: print "running abaqus cae on %s"%(toolbox.getFileName(filePath))
     cmd = 'abaqus cae noGUI=%s'%(filePath)
-    paramString = ' '.join(map(str,p))
+    paramString = str(p)
     cmd += ' -- %s %s > %s 2>&1'%(str(baseName),paramString,'exeCalls.txt')
     if verbose: print 'cmd= ',cmd
     pCall1 = subprocess.call(cmd, shell=True)
@@ -81,7 +81,7 @@ def saveValues(p, feData, value, no='final'):
         file.write('run number: %s\n'%(no))
         file.write('parameter inputs: %s\n'%(p))
         file.write('least square error %s\n'%value)
-        file.write('\n'.join('%f ' %x[0] for x in zip(*feData)))
+        file.write('\n'.join('%f ' %(x[0]) for x in feData))
 
 def residuals(p, modelsDir, expDir, modelType='Int'):
     ''' residuals(p, expData) computes the diff (in a least square sense) between experimental data and FE data (function of p)
@@ -118,25 +118,23 @@ def callbackF(p):
         file.write('iteration number: %i\n'%(NIter))
         file.write('evaluation number: %i\n'%(NFeval))
         file.write('parameter inputs: %s\n'%(p))
-    
-def getOptiParam(p0, modelsDir, expDir, optiParam, pBounds=[0.,1.], modelType='Int'):
-    opts = {'maxiter':optiParam['maxEval'],'disp':True,'ftol':optiParam['ftol']}
-    from scipy.optimize import minimize
-    # res = minimize(residuals, p0, method='L-BFGS-B', args=(modelsDir, expDir, modelType), jac=False, bounds=pBounds, tol=optiParam['ftol'], options = opts,callback=callbackF)
-    res = minimize(residuals, p0, method='TNC', args=(modelsDir, expDir, modelType), jac=False, bounds=pBounds, tol=optiParam['ftol'], options = opts,callback=callbackF)#simple conjugate gradient
+
+def getOptiParam(modelsDir, expDir, optiParam, pBounds=None, modelType='Int'):
+    from scipy.optimize import minimize_scalar
+    opts = {'maxiter':optiParam['maxEval'],'disp':True}
+    import numpy as np
+    res = minimize_scalar(residuals, bounds=pBounds, args=(modelsDir, expDir, modelType), tol=optiParam['ftol'], method='bounded')#, options=opts)
     pLSQ = res.x
     fVal = res.fun
     d = {}
     d['funcalls']= res.nfev
-    d['nit'] = res.nit
-    #d['grad'] = res.fjac
     d['task']= res.message
     if verbose: print d
     return pLSQ,fVal,d
 
-def main(p0, expDir, modelsDir, options={}, pBounds=[0.,1.], modelType='Int'):
+def main(expDir, modelsDir, options={}, pBounds=None, modelType='Int'):
     optiParam = {}
     optiParam['maxEval']=10
     optiParam['ftol']=1e-8
     optiParam.update(options)
-    return getOptiParam(p0, modelsDir, expDir, optiParam, pBounds, modelType)
+    return getOptiParam(modelsDir, expDir, optiParam, pBounds, modelType)

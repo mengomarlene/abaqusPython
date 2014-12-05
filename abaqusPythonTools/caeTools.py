@@ -28,7 +28,7 @@ def getParameters(_p={}):
     #MATERIAL
     param['myMaterialName'] = ['AFPositif','AFNegatif']
     param['stupidMaterial'] = False
-    param['matType'] = 'Holzapfel'#'Holzapfel' or 'neoHooke'
+    param['matType'] = 'neoHooke'#'Holzapfel' or 'neoHooke'
     '''holzapfelParameters: C10,D,k1,k2,kappa
         ==========
         HUMAN DATA
@@ -132,6 +132,15 @@ def getEandNu(holzapfelParam):
     if d==0.: nu = 0.499
     else: nu = (6-2*(4./3.*k+2*c10)*d)/(12+4*d*c10)
     E = 8./3.*k+4*(1+nu)*c10
+    return E,nu
+#-----------------------------------------------------
+def getEandNuPerp(holzapfelParam):
+    c10 = holzapfelParam[0]
+    d = holzapfelParam[1]
+    #elastic equivalent for the full material, initial fibre stiffness
+    if d==0.: nu = 0.499
+    else: nu = (3-2*c10*d)/(6+2*d*c10)
+    E = 4*(1+nu)*c10
     return E,nu
 #-----------------------------------------------------
 #-----------------------------------------------------
@@ -709,8 +718,7 @@ def analysisWithCylinders(p):
         if p['twoDirections']:
             myJobDef.setFibreInputType('twoDirections')
     myNewJob = myJobDef.create()    
-    if p['numCpus']>1:
-        myNewJob.setValues(numCpus=p['numCpus'],numDomains=p['numCpus'],multiprocessingMode=THREADS)
+    if p['numCpus']>1: myNewJob.setValues(numCpus=p['numCpus'],numDomains=p['numCpus'],multiprocessingMode=THREADS)
     if p['saveCaeFile']:mdb.saveAs(myNewJob.name)
     #-------------------------------------------------------
     return myNewJob,mdb
@@ -874,7 +882,9 @@ def analysisWithRectangles(p):
         elif len(p['holzapfelParameters']) == 5:#there is one set of parameters
             matParam = p['holzapfelParameters']
         else: raise("parameter 'holzapfelParameters' of unknown type or wrong length")
-        E,nu = getEandNu(matParam)
+        if p['load'] == 'horizDispl': E,nu = getEandNuPerp(matParam)
+        elif p['load'] == 'vertDispl': E,nu = getEandNu(matParam)
+        else: raise Exception("NOT IMPLEMENTED")
 
         if p['stupidMaterial']:
             myMat.Elastic(table=((E, nu), ))
@@ -899,7 +909,7 @@ def analysisWithRectangles(p):
         lowerFace.append(instances[rec].faces.findAt((lowerFacePoint,) ))
         upperFacePoint = (p['width']/2.,p['height'],p['length']/p['nbParts']*(rec+0.5))
         upperFace.append(instances[rec].faces.findAt((upperFacePoint,)))
-        myAssembly.seedPartInstance(regions=(instances[rec],), size=.6)
+        myAssembly.seedPartInstance(regions=(instances[rec],), size=.3*p['length']/p['nbParts'])
         myAssembly.generateMesh(regions=(instances[rec],))
         elType = mesh.ElemType(C3D8R, hourglassControl=ENHANCED)
         myAssembly.setElementType((instances[rec].cells,), (elType,))

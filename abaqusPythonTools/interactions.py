@@ -38,7 +38,7 @@ class Interactions:
             self.Friction = fBehaviour
             self.frictionCoef = fCoef
 
-    def setCohesiveBehaviour(self,useDefaultBehaviour=True,penalties=(1000.0, 1000.0, 1000.0)):
+    def setCohesiveBehaviour(self,useDefaultBehaviour=True,penalties= (100.0, 100.0, 100.0)):
         self.Cohesive = True
         self.useCoheDefault = useDefaultBehaviour
         if not useDefaultBehaviour: self.cohePenalties = penalties
@@ -81,11 +81,14 @@ class Interactions:
             if self.Friction == 'Frictionless':contact.TangentialBehavior(formulation=FRICTIONLESS)
             elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
             elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)
+            if self.abqModel.interactions.has_key(self.name):iName = self.name
+            elif self.abqModel.interactions.has_key(self.name+'-1'):iName = self.name+'-1'
+            else: raise Exception('unknown interaction name')
             if self.Cohesive:
-                self.abqModel.interactions[self.name+'-1'].setValues(sliding=FINITE, enforcement=NODE_TO_SURFACE)
+                self.abqModel.interactions[iName].setValues(sliding=FINITE, enforcement=NODE_TO_SURFACE)
                 if self.useCoheDefault: contact.CohesiveBehavior()
                 else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ))
             else:
                 #if not self.allowSep: contact.normalBehavior.setValues(allowSeparation=OFF)
-                self.abqModel.interactions[self.name+'-1'].setValues(sliding=FINITE, enforcement=SURFACE_TO_SURFACE, initialClearance=OMIT, adjustMethod=OVERCLOSED)
+                self.abqModel.interactions[iName].setValues(sliding=FINITE, enforcement=SURFACE_TO_SURFACE, initialClearance=OMIT, adjustMethod=OVERCLOSED)
             

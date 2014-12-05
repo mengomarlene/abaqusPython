@@ -1,3 +1,4 @@
 workspace/
 *.pyc
 *.wmv
+*.py.bak

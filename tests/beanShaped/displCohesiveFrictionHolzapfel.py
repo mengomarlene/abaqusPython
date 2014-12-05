@@ -2,7 +2,10 @@
 """
 # if called with runAbaqus.py: add the root directory to the abaqus search path
 import sys
-sys.path.append(sys.argv[-1])
+if os.path.isdir(sys.argv[-1]):rundir=sys.argv[-1]
+else: rundir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'runFETools')
+sys.path.append(rundir)
+
 import toolbox
 
 def postPro(jobName):
