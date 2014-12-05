@@ -77,11 +77,11 @@ def getParameters(_p={}):
     param['twoDirections'] = False#creates a material with two complementary directions given by fiberDirections instead of two materials with one direction each
     #MESH
     param['meshType'] = 'seedEdgeByNumber'      #'seedEdgeBySize','seedEdgeByNumber','seedPartInstance'
-    param['meshControl'] = 50                   #size for 'seedPartInstance' or 'seedEdgeBySize', 
+    param['meshControl'] = 40                   #size for 'seedPartInstance' or 'seedEdgeBySize', 
                                                 #number for 'seedEdgeByNumber'
     import mesh
-    from abaqusConstants import C3D8R,ENHANCED  #C3D8RH,ENHANCED if incompressible material
-    param['elemType'] = mesh.ElemType(C3D8R, hourglassControl=ENHANCED)
+    from abaqusConstants import C3D8RH,ENHANCED  #C3D8RH,ENHANCED if incompressible material
+    param['elemType'] = mesh.ElemType(C3D8RH, hourglassControl=ENHANCED)
     #INTERACTIONS
     param['interfaceType'] = 'Tie'                  #'Frictionless', 'Tie', 'Friction'
     param['contactStiffness'] = 1.                  #irrelevant if param['interfaceType']=='Tie'
@@ -101,8 +101,8 @@ def getParameters(_p={}):
     param['internalPressure'] = None
     #JOB
     param['modelName'] = 'defaultName'
-    param['scratchDir'] = 'D:\Abaqus'
-    param['numCpus'] = 1
+    param['scratchDir'] = 'D:/ABAQUS_V613_Work/MarleneMengoni'
+    param['numCpus'] = 8
     param['saveCaeFile'] = True
     #
     param.update(_p)
@@ -132,15 +132,6 @@ def getEandNu(holzapfelParam):
     if d==0.: nu = 0.499
     else: nu = (6-2*(4./3.*k+2*c10)*d)/(12+4*d*c10)
     E = 8./3.*k+4*(1+nu)*c10
-    return E,nu
-#-----------------------------------------------------
-def getEandNuPerp(holzapfelParam):
-    c10 = holzapfelParam[0]
-    d = holzapfelParam[1]
-    #elastic equivalent for the full material, initial fibre stiffness
-    if d==0.: nu = 0.499
-    else: nu = (3-2*c10*d)/(6+2*d*c10)
-    E = 4*(1+nu)*c10
     return E,nu
 #-----------------------------------------------------
 #-----------------------------------------------------
@@ -552,6 +543,7 @@ def analysisWithPartialCylinders(p):
 ##################################################################################
 ##################################################################################    
 def analysisWithCylinders(p):
+    print p
     # check parameter consistency
     if len(p['myMaterialName']) != p['nbParts']: raise Exception("number of material names as to be equal to the number of parts!!")
     if not p['stupidMaterial']:
@@ -882,9 +874,7 @@ def analysisWithRectangles(p):
         elif len(p['holzapfelParameters']) == 5:#there is one set of parameters
             matParam = p['holzapfelParameters']
         else: raise("parameter 'holzapfelParameters' of unknown type or wrong length")
-        if p['load'] == 'horizDispl': E,nu = getEandNuPerp(matParam)
-        elif p['load'] == 'vertDispl': E,nu = getEandNu(matParam)
-        else: raise Exception("NOT IMPLEMENTED")
+        E,nu = getEandNu(matParam)
 
         if p['stupidMaterial']:
             myMat.Elastic(table=((E, nu), ))

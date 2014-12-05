@@ -1,7 +1,5 @@
 class Interactions:
-#HARD CONTACT AND NODE-TO-SURFACE METHOD DOES NOT CONVERGE!!!!!
 #node-to-surface necessary for cohesive behavior
-#--> use penalty method in all cases!!!
     def __init__(self,model):
         self.abqModel = model
         self.name = 'interface'
@@ -45,7 +43,7 @@ class Interactions:
 
     def createInteraction(self):
         if not (self.master and self.slave): raise Exception('master and slave couples MUST be defined with the setMasterSlave function')
-        from abaqusConstants import HARD,OFF,PENALTY,LINEAR,FRICTIONLESS,ROUGH,FRACTION,AUTOMATIC,SURFACE_TO_SURFACE,NODE_TO_SURFACE,FINITE,OMIT,OVERCLOSED
+        from abaqusConstants import OFF,HARD,LINEAR,PENALTY,SPECIFIED,FRICTIONLESS,ROUGH,FRACTION,AUTOMATIC,SURFACE_TO_SURFACE,NODE_TO_SURFACE,FINITE,OMIT,OVERCLOSED
         if self.Tie: self.abqModel.Tie(name=self.name,master=self.master,slave=self.slave)
         else:
             iPropName = self.Friction
@@ -55,14 +53,13 @@ class Interactions:
                 self.abqModel.interactionProperties[iPropName]
             except:
                 contact = self.abqModel.ContactProperty(iPropName)
-                contact.NormalBehavior(pressureOverclosure=LINEAR, contactStiffness=10000.0,)
-                #contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=self.normalStiffness, stiffnessBehavior=LINEAR, constraintEnforcementMethod=PENALTY)
+                contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=10000.0)
                 if self.Friction == 'Frictionless': contact.TangentialBehavior(formulation=FRICTIONLESS)
                 elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
                 elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)
                 if self.Cohesive:
                     if self.useCoheDefault: contact.CohesiveBehavior()
-                    else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ))
+                    else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ),eligibility=SPECIFIED)
                 #elif not self.allowSep: contact.normalBehavior.setValues(allowSeparation=OFF)
             if self.Cohesive:        
                 self.abqModel.SurfaceToSurfaceContactStd(name=self.name,createStepName='Initial',master=self.master,slave=self.slave,sliding=FINITE, enforcement=NODE_TO_SURFACE, interactionProperty=iPropName, initialClearance=OMIT, adjustMethod=OVERCLOSED)
@@ -70,14 +67,13 @@ class Interactions:
                 self.abqModel.SurfaceToSurfaceContactStd(name=self.name,createStepName='Initial',master=self.master,slave=self.slave,sliding=FINITE,enforcement=SURFACE_TO_SURFACE, surfaceSmoothing=AUTOMATIC,interactionProperty=iPropName, initialClearance=OMIT, adjustMethod=OVERCLOSED)
 
     def changeInteraction(self):
-        from abaqusConstants import OFF,HARD,PENALTY,LINEAR,FRICTIONLESS,ROUGH,FRACTION,SURFACE_TO_SURFACE,FINITE,NODE_TO_SURFACE,OMIT,OVERCLOSED
+        from abaqusConstants import OFF,HARD,LINEAR,PENALTY,FRICTIONLESS,SPECIFIED,ROUGH,FRACTION,SURFACE_TO_SURFACE,FINITE,NODE_TO_SURFACE,OMIT,OVERCLOSED
         if self.Tie:
             if not (self.master and self.slave): raise Exception('master and slave couples MUST be defined with the setMasterSlave function')
             else: self.abqModel.Tie(name=self.name,master=self.master,slave=self.slave)
         else:
             contact = self.abqModel.interactionProperties[self.name]
-            contact.NormalBehavior(pressureOverclosure=LINEAR, contactStiffness=10000.0,)
-            #contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=self.normalStiffness, stiffnessBehavior=LINEAR, constraintEnforcementMethod=PENALTY)
+            contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=10000.0)
             if self.Friction == 'Frictionless':contact.TangentialBehavior(formulation=FRICTIONLESS)
             elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
             elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)
@@ -87,7 +83,7 @@ class Interactions:
             if self.Cohesive:
                 self.abqModel.interactions[iName].setValues(sliding=FINITE, enforcement=NODE_TO_SURFACE)
                 if self.useCoheDefault: contact.CohesiveBehavior()
-                else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ))
+                else: contact.CohesiveBehavior(defaultPenalties=OFF, table=(self.cohePenalties, ),eligibility=SPECIFIED, stiffnessBehavior=LINEAR, constraintEnforcementMethod=PENALTY)
             else:
                 #if not self.allowSep: contact.normalBehavior.setValues(allowSeparation=OFF)
                 self.abqModel.interactions[iName].setValues(sliding=FINITE, enforcement=SURFACE_TO_SURFACE, initialClearance=OMIT, adjustMethod=OVERCLOSED)
