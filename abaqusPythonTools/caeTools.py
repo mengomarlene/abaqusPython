@@ -124,6 +124,15 @@ def createCuboidPart(width,length,height,name,model):
     myCuboid.BaseSolidExtrude(sketch=myRect, depth=height)
     return myCuboid
 #-----------------------------------------------------  
+def getEandNuPerp(holzapfelParam):
+    c10 = holzapfelParam[0]
+    d = holzapfelParam[1]
+    #elastic equivalent for the full material, initial fibre stiffness
+    if d==0.: nu = 0.499
+    else: nu = (3-2*c10*d)/(6+2*d*c10)
+    E = 4*(1+nu)*c10
+    return E,nu
+#-----------------------------------------------------  
 def getEandNu(holzapfelParam):
     c10 = holzapfelParam[0]
     d = holzapfelParam[1]
@@ -874,7 +883,8 @@ def analysisWithRectangles(p):
         elif len(p['holzapfelParameters']) == 5:#there is one set of parameters
             matParam = p['holzapfelParameters']
         else: raise("parameter 'holzapfelParameters' of unknown type or wrong length")
-        E,nu = getEandNu(matParam)
+        if p['load'] == 'vertDispl': E,nu = getEandNu(matParam)
+        elif p['load'] == 'horizDispl': E,nu = getEandNuPerp(matParam)
 
         if p['stupidMaterial']:
             myMat.Elastic(table=((E, nu), ))
