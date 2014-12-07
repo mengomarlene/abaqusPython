@@ -4,7 +4,7 @@ import abaqusPythonTools.extractors as ext
 import os
 import numpy as np
 
-def matrixStiffnessExtractor(odbName):
+def matrixStiffnessExtractor(odbName,param):
     keysToWrite = ['matrixStiffness']
     valuesToWrite = dict.fromkeys(keysToWrite, None)
     run = False
@@ -17,16 +17,25 @@ def matrixStiffnessExtractor(odbName):
             break
     if run:
         print "running postPro on %s"%(odbName)
+        thisNb = param['nbParts']
+        area = param['height']*param['width']
+        lamThickness = param['length']/thisNb
+        c10 = param['holzapfelParameters'][0]
+        d = param['holzapfelParameters'][1]
+        #elastic equivalent for the full material, initial fibre stiffness
+        if d==0.: nu = 0.499
+        else: nu = (3-2*c10*d)/(6+2*d*c10)
+        E = 4*(1+nu)*c10
+
         myOdb = odbTools.openOdb(odbName)
         extDispl = ext.getFinalU_3(myOdb, 'outerFace')
         outForce = ext.getFinalResF_3(myOdb,'outerFace')
         masterName = 'MASTER1'
         slaveName = 'SLAVE1'
         copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
-        thisNb = len(myOdb.rootAssembly.instances.keys())
         totalCoheOpen = np.mean(copen)*(thisNb-1)
         matrixOpen = (max(extDispl)-totalCoheOpen)/thisNb
-        matrixStiffness = outForce/matrixOpen
+        matrixStiffness = [outForce/(area*matrixOpen),E/lamThickness]
         valuesToWrite = dict(matrixStiffness=matrixStiffness)    
         odbTools.writeValues(valuesToWrite)
         myOdb.close()

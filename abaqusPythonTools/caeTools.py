@@ -2,17 +2,19 @@
 """
 caeTools
 """
-## default abaqus modules
-from abaqus import *
-backwardCompatibility.setValues(reportDeprecated=False)
-from abaqusConstants import *
-#some caeModules seem not to be imported by abaqus cae in noGUI,
-#let's import all of them here!!
-from caeModules import *
 ## classical python modules
 import math
 ## my abaqus module
 import abaqusTools
+
+def importAbaqusModules():
+    ## default abaqus modules
+    from abaqus import *
+    backwardCompatibility.setValues(reportDeprecated=False)
+    from abaqusConstants import *
+    #some caeModules seem not to be imported by abaqus cae in noGUI,
+    #let's import all of them here!!
+    from caeModules import *
 #-----------------------------------------------------
 def getParameters(_p={}):
     param = {}
@@ -79,9 +81,7 @@ def getParameters(_p={}):
     param['meshType'] = 'seedEdgeByNumber'      #'seedEdgeBySize','seedEdgeByNumber','seedPartInstance'
     param['meshControl'] = 40                   #size for 'seedPartInstance' or 'seedEdgeBySize', 
                                                 #number for 'seedEdgeByNumber'
-    import mesh
-    from abaqusConstants import C3D8RH,ENHANCED  #C3D8RH,ENHANCED if incompressible material
-    param['elemType'] = mesh.ElemType(C3D8RH, hourglassControl=ENHANCED)
+    param['elemType'] = 'C3D8RH'
     #INTERACTIONS
     param['interfaceType'] = 'Tie'                  #'Frictionless', 'Tie', 'Friction'
     param['contactStiffness'] = 1.                  #irrelevant if param['interfaceType']=='Tie'
@@ -107,6 +107,13 @@ def getParameters(_p={}):
     #
     param.update(_p)
     return param
+#-----------------------------------------------------
+def setElementType(eleTypeString):
+    from abaqusConstants import C3D8R,C3D8RH,ENHANCED 
+    if eleTypeString=='C3D8RH': eleType = mesh.ElemType(C3D8RH, hourglassControl=ENHANCED)
+    else:eleType = mesh.ElemType(C3D8R, hourglassControl=ENHANCED)
+    return eleType
+
 #-----------------------------------------------------
 def createHollowCylinderPart(center,innerRadius,outerRadius,height,name,model,angle=360):
     myCercle = model.ConstrainedSketch(name+'_sketch',sheetSize=250.)
@@ -145,6 +152,7 @@ def getEandNu(holzapfelParam):
 #-----------------------------------------------------
 #-----------------------------------------------------
 def analysisWithPartitionCylinders(p):
+    importAbaqusModules()
     # check parameter consistency
     if len(p['nbCut']) != p['nbParts']: raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
     if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
@@ -247,10 +255,10 @@ def analysisWithPartitionCylinders(p):
                 edge.append(instances[cyl].edges.findAt((ptMeshC[n],)))
                 ctrl.append(int(p['meshControl']/p['nbCut'][cyl]))
 
-            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,p['elemType'],control=ctrl,meshType=p['meshType']
+            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,setElementType(p['elemType']),control=ctrl,meshType=p['meshType']
             ,edges=edge)
         else:
-            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,p['elemType'],control=p['meshControl'],meshType=p['meshType'])
+            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,setElementType(p['elemType']),control=p['meshControl'],meshType=p['meshType'])
 
     if p['nbParts']>1:
         ##CONSTRAINTS - same for all interfaces!!
@@ -369,6 +377,7 @@ def analysisWithPartitionCylinders(p):
 ##################################################################################
 ##################################################################################  
 def analysisWithPartialCylinders(p):
+    importAbaqusModules()
     # check parameter consistency
     if len(p['nbCut']) != p['nbParts']:  raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
     if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
@@ -441,10 +450,10 @@ def analysisWithPartialCylinders(p):
                 widthEdges = instances[domainNb].edges.getSequenceFromMask(mask=('[#8 ]',),)
                 if 'Number' in p['meshType']: ctrl = [p['meshControl'],2]
                 else: ctrl = [p['meshControl'],.2]
-                abaqusTools.assignElemtypeAndMesh(instances[domainNb],myAssembly,p['elemType'],control=ctrl,meshType=p['meshType']
+                abaqusTools.assignElemtypeAndMesh(instances[domainNb],myAssembly,setElementType(p['elemType']),control=ctrl,meshType=p['meshType']
                 ,edges=[circEdges,widthEdges])
             else:
-                abaqusTools.assignElemtypeAndMesh(instances[domainNb],myAssembly,p['elemType'],control=p['meshControl'],meshType=p['meshType'])
+                abaqusTools.assignElemtypeAndMesh(instances[domainNb],myAssembly,setElementType(p['elemType']),control=p['meshControl'],meshType=p['meshType'])
             interfaceName = 'interdomain%d'%(domainNb)   
             if arc > 0 :
                 endFace = instances[domainNb-1].faces.getSequenceFromMask(mask=('[#20 ]', ), )
@@ -552,7 +561,7 @@ def analysisWithPartialCylinders(p):
 ##################################################################################
 ##################################################################################    
 def analysisWithCylinders(p):
-    print p
+    importAbaqusModules()
     # check parameter consistency
     if len(p['myMaterialName']) != p['nbParts']: raise Exception("number of material names as to be equal to the number of parts!!")
     if not p['stupidMaterial']:
@@ -624,6 +633,7 @@ def analysisWithCylinders(p):
         topFace.append(instances[cyl].faces.findAt((topFacePoint,)))
         outerFacePoint = (p['innerRadius']+p['lamellarThickness']*(cyl+1),p['height']/2.,0.)
         outerFace.append(instances[cyl].faces.findAt((outerFacePoint,)))
+        
         if 'Edge' in p['meshType']:
             circEdges = instances[cyl].edges.getSequenceFromMask(mask=('[#4 ]',),)
             widthEdges = instances[cyl].edges.getSequenceFromMask(mask=('[#8 ]',),)
@@ -632,10 +642,10 @@ def analysisWithCylinders(p):
             except(TypeError):
                 if 'Number' in p['meshType']: ctrl = [p['meshControl'],2]
                 else: ctrl = [p['meshControl'],.2]
-            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,p['elemType'],control=ctrl,meshType=p['meshType']
+            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,setElementType(p['elemType']),control=ctrl,meshType=p['meshType']
             ,edges=[circEdges,widthEdges])
         else:
-            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,p['elemType'],control=p['meshControl'],meshType=p['meshType'])
+            abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,setElementType(p['elemType']),control=p['meshControl'],meshType=p['meshType'])
     if p['nbParts']>1:
         ## CONSTRAINTS - same for all interfaces!!
         for nb in range(1,p['nbParts']):
@@ -726,6 +736,7 @@ def analysisWithCylinders(p):
 ##################################################################################
 ##################################################################################
 def lamellarRectangle(p):
+    importAbaqusModules()
 
 	# MODEL
     myModel = mdb.Model(p['modelName'])
@@ -765,7 +776,7 @@ def lamellarRectangle(p):
     leftEdge = myInstance.edges.getSequenceFromMask( ('[#2 ]', ), )
     rightEdge = myInstance.edges.getSequenceFromMask( ('[#8 ]', ), )   
     
-    myAssembly.setElementType(allSet, (p['elemType'],))
+    myAssembly.setElementType(allSet, (setElementType(p['elemType']),))
     if p['meshType'] == 'seedPartInstance':
         myAssembly.seedPartInstance((myInstance,), size=p['meshControl'])
     else:
@@ -853,6 +864,7 @@ def lamellarRectangle(p):
     return myNewJob,mdb
 ##################################################################################    
 def analysisWithRectangles(p):
+    importAbaqusModules()
     # check parameter consistency
     if len(p['myMaterialName']) != p['nbParts']:  raise Exception("number of material names as to be equal to the number of parts!!")
     if not p['stupidMaterial']:
@@ -911,7 +923,7 @@ def analysisWithRectangles(p):
         upperFace.append(instances[rec].faces.findAt((upperFacePoint,)))
         myAssembly.seedPartInstance(regions=(instances[rec],), size=.3*p['length']/p['nbParts'])
         myAssembly.generateMesh(regions=(instances[rec],))
-        myAssembly.setElementType((instances[rec].cells,), (p['elemType'],))
+        myAssembly.setElementType((instances[rec].cells,), (setElementType(p['elemType']),))
     if p['nbParts']>1:
         ## CONSTRAINTS - same for all interfaces!!
         for nb in range(1,p['nbParts']):
