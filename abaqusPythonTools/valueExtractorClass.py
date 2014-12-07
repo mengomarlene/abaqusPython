@@ -34,7 +34,7 @@ class ValueExtractor:
     def setCoordSystem(self,sysC):
         self.sysC = sysC#a datum 
     def setStepName(self,stepName):
-        self.stepName = stepName#a datum 
+        self.stepName = stepName
     #-----------------------------------------------------
     def getEvolution_Nodal(self):
         return self.__getEvolution()
@@ -105,4 +105,71 @@ class ValueExtractor:
                 value = [ptValue.data for ptValue in theFieldOnSet.values]
                 #if len(subset.nodes) >1: value = [ptValue.data for ptValue in theFieldOnSet.values]
                 #else: value.append(theFieldOnSet.values[0].data)
+        return value
+
+class ContactValueExtractor:
+    """Class ContactValueExtractor - extract odb contact values on a contact pair
+    ValueExtractor(odb,masterSurf,slaveSurf)#masterSurf,slaveSurf can be strings or a surface objects
+    Methods:
+        setField(fieldKey) - the field to extract, default is COPEN
+    """
+    def __init__(self,odb,masterSurf,slaveSurf):
+        self.odb = odb
+        self.master = masterSurf#either a string or a set object
+        self.slave = slaveSurf#either a string or a set object
+        self.fieldKey = 'COPEN'
+        self.stepName = None
+    #-----------------------------------------------------
+    def setField(self,fieldKey):
+        self.fieldKey = fieldKey
+    def setStepName(self,stepName):
+        self.stepName = stepName
+    #-----------------------------------------------------
+    #-----------------------------------------------------
+    def getEvolution(self):
+        if self.stepName is None:self.stepName = self.odb.steps.keys()[-1]
+        frames = self.odb.steps[self.stepName].frames
+        values = self.__getContactValues(frameNo=frames)
+        value = list()
+        for frame in range(len(frames)):
+            value.append([data for data in values[frame]])
+        return value
+    #-----------------------------------------------------
+    def getFinalValue(self):
+        if self.stepName is None:self.stepName = self.odb.steps.keys()[-1]
+        values = self.__getContactValues()
+        return values
+#-----------------------------------------------------
+    def __getContactValues(self,frameNo=-1):
+        try:
+            value = [self.__getContactValues(frameNb) for frameNb in range(len(frameNo))]
+        except(TypeError):
+            frame = self.odb.steps[self.stepName].frames[frameNo]
+            fieldName = self.fieldKey+' '*(9-len(self.fieldKey))
+            try:#setName is a string
+                assembly = self.odb.rootAssembly
+                if ('INSTANCE'  in self.master) and ('INSTANCE'  in self.slave):#surface name are part surfaces
+                    iName = self.master.split('.')[0]
+                    iSetName = self.master.split('.')[1]
+                    try:
+                        masterSurf = assembly.instances[iName].surfaces[iSetName]
+                        slaveSurf = assembly.instances[iName].surfaces[iSetName]
+                    except:
+                        masterSurf = assembly.instances[iName].nodeSets[iSetName.upper()]
+                        slaveSurf = assembly.instances[iName].nodeSets[iSetName.upper()]
+                else:#surfaces names are assembly surfaces
+                    try:
+                        masterSurf = assembly.surfaces[self.master]
+                        slaveSurf = assembly.surfaces[self.slave]
+                        masterName = 'ASSEMBLY_'+self.master
+                        slaveName = 'ASSEMBLY_'+self.slave
+                    except(KeyError):
+						print assembly.surfaces
+						raise Exception("unknown master/slave surface names")
+            except(TypeError):#surfaces are object
+				masterName = 'ASSEMBLY_'+self.master.name
+				slaveName = 'ASSEMBLY_'+self.slave.name
+            fieldName += slaveName+'/'+masterName
+            theField = frame.fieldOutputs[fieldName]
+            value = [ptValue.data for ptValue in theField.values]
         return value

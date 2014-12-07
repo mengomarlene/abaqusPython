@@ -1,7 +1,59 @@
 import abaqusPythonTools.odbTools as odbTools
+import abaqusPythonTools.contactExtractors as cExt
 import abaqusPythonTools.extractors as ext
 import os
+import numpy as np
 
+def matrixStiffnessExtractor(odbName):
+    keysToWrite = ['matrixStiffness']
+    valuesToWrite = dict.fromkeys(keysToWrite, None)
+    run = False
+    for data in range(len(valuesToWrite)):
+        file = valuesToWrite.keys()[data]+'.ascii'
+        if (not os.path.isfile(file))\
+        or (os.path.getmtime(file) < os.path.getmtime('exeCalls.txt'))\
+        or (os.path.getmtime(file) < os.path.getmtime(__file__)):
+            run = True
+            break
+    if run:
+        print "running postPro on %s"%(odbName)
+        myOdb = odbTools.openOdb(odbName)
+        extDispl = ext.getFinalU_3(myOdb, 'outerFace')
+        outForce = ext.getFinalResF_3(myOdb,'outerFace')
+        masterName = 'MASTER1'
+        slaveName = 'SLAVE1'
+        copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
+        thisNb = len(myOdb.rootAssembly.instances.keys())
+        totalCoheOpen = np.mean(copen)*(thisNb-1)
+        matrixOpen = (max(extDispl)-totalCoheOpen)/thisNb
+        matrixStiffness = outForce/matrixOpen
+        valuesToWrite = dict(matrixStiffness=matrixStiffness)    
+        odbTools.writeValues(valuesToWrite)
+        myOdb.close()
+
+def contactStiffnessExtractors(odbName):    
+    keysToWrite = ['contactStiffness']
+    valuesToWrite = dict.fromkeys(keysToWrite, None)
+    run = False
+    for data in range(len(valuesToWrite)):
+        file = valuesToWrite.keys()[data]+'.ascii'
+        if (not os.path.isfile(file))\
+        or (os.path.getmtime(file) < os.path.getmtime('exeCalls.txt'))\
+        or (os.path.getmtime(file) < os.path.getmtime(__file__)):
+            run = True
+            break
+    if run:
+        print "running postPro on %s"%(odbName)
+        myOdb = odbTools.openOdb(odbName)
+        masterName = 'MASTER1'
+        slaveName = 'SLAVE1'
+        copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
+        cpress = cExt.getFinalCPressure(myOdb,masterName,slaveName)
+        contactStiffness = np.mean(cpress)/np.mean(copen)#[cpress[node]/copen[node] for node in range(len(copen))]
+        valuesToWrite = dict(contactStiffness=contactStiffness)    
+        odbTools.writeValues(valuesToWrite)
+        myOdb.close()
+    
 def containedDisplExtractors(odbName):    
     keysToWrite = ['radialDisp_intFace','resForce_intFace','radialDisp_outFace','resForce_outFace','time']
     valuesToWrite = dict.fromkeys(keysToWrite, None)
@@ -32,20 +84,9 @@ def containedDisplExtractors(odbName):
 def optiStiffnessExtractors(odbName):    
     myOdb = odbTools.openOdb(odbName)
     time = ext.getTime(myOdb)
-    extDispl = ext.getU_3(myOdb, 'outerFace')
-    extDiplsList = [displ[0] for displ in extDispl]
-    outForce = ext.getRF_3(myOdb,'outerFace')
-    extForceList = [force[0] for force in outForce]
-    stiffness= 0.
-    if abs(extForceList[-1])>1e-8 and abs(extForceList[-1])<1e8:stiffness=extForceList[-1]/extDiplsList[-1]
+    extDispl = ext.getFinalU_3(myOdb, 'outerFace')
+    outForce = ext.getFinalResF_3(myOdb,'outerFace')
+    stiffness = 0.
+    if abs(outForce)>1e-8 and abs(outForce)<1e8:stiffness=outForce/extDispl[0]
     odbTools.writeValuesOpti(stiffness)
-    # eMax = max(extDiplsList)
-    # import numpy as np
-    # extShort = np.linspace(0.,eMax,200)
-    # shortForce = np.interp(extShort, extDiplsList, extForceList)
-    # n0=5
-    # linearExt = extShort[n0:]
-    # linearLoad = shortForce[n0:]
-    # zI = np.polyfit(linearExt, linearLoad, 1)
-    # odbTools.writeValuesOpti(zI[0])
     myOdb.close()

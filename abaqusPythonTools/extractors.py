@@ -1,11 +1,8 @@
 import abaqusPythonTools.valueExtractorClass as valueExtractor
-#NLGEOM fieldOutputs.keys = 
-# 'CNORMF   ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 'COPEN    ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1',
-# 'CPRESS   ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 'CSHEAR1  ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 
-# 'CSHEAR2  ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 'CSHEARF  ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 
-# 'CSLIP1   ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1', 'CSLIP2   ASSEMBLY_SLAVE1/ASSEMBLY_MASTER1',
+#fieldOutputs.keys = 
 # 'LE' (log eulerian strain ln(V)),'LOCALDIR1','RT','S','U','DG' (deformation gradient)
 #  !!'P' = Uniformly distributed pressure load on element faces
+# thisOdb = session.viewports['Viewport: 1'].displayedObject
 #-----------------------------------------------------
 def getTime(odb):
     stepName = odb.steps.keys()[-1]
@@ -167,6 +164,27 @@ def getFinalRF(odb,setName,sysC=None):
     values.setCoordSystem(sysC)
     return values.getFinalValue_Nodal()
 #-----------------------------------------------------
+def getFinalRF_1(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('RF')
+    values.setComponent('RF1')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_Nodal()
+#-----------------------------------------------------
+def getFinalRF_2(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('RF')
+    values.setComponent('RF2')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_Nodal()
+#-----------------------------------------------------
+def getFinalRF_3(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('RF')
+    values.setComponent('RF3')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_Nodal()
+#-----------------------------------------------------
 def getRF_Magnitude(odb,setName,sysC=None):
     from abaqusConstants import MAGNITUDE
     values = valueExtractor.ValueExtractor(odb,setName)
@@ -226,6 +244,34 @@ def getResF2D(odb,setName,sysC=None):
     resForce = list()
     for frame in range(len(r1)):
         resForce.append([sum(r1[frame]),sum(r2[frame])])
+    return resForce
+#-----------------------------------------------------
+def getFinalResF(odb,setName,sysC=None):
+    r1 = getFinalRF_1(odb, setName, sysC)
+    r2 = getFinalRF_2(odb, setName, sysC)
+    r3 = getFinalRF_3(odb, setName, sysC)
+    resForce = [sum(r1),sum(r2),sum(r3)]
+    return resForce
+#-----------------------------------------------------
+def getFinalResF_1(odb,setName,sysC=None):
+    r1 = getFinalRF_1(odb, setName, sysC)
+    resForce = sum(r1)
+    return resForce
+#-----------------------------------------------------
+def getFinalResF_2(odb,setName,sysC=None):
+    r2 = getFinalRF_2(odb, setName, sysC)
+    resForce = sum(r2)
+    return resForce
+#-----------------------------------------------------
+def getFinalResF_3(odb,setName,sysC=None):
+    r3 = getFinalRF_3(odb, setName, sysC)
+    resForce = sum(r3)
+    return resForce
+#-----------------------------------------------------
+def getFinalResF2D(odb,setName,sysC=None):
+    r1 = getFinalRF_1(odb, setName, sysC)
+    r2 = getFinalRF_2(odb, setName, sysC)
+    resForce [sum(r1),sum(r2)]
     return resForce
 #-----------------------------------------------------
 # STRESSES

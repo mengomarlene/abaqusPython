@@ -22,7 +22,15 @@ def writeValues(listDict):
     import os
     for key in listDict.keys():
         datFile = open(key+'.ascii', 'w')
-        for value in listDict[key]:
+        try:
+            for value in listDict[key]:
+                try:
+                    datFile.writelines( "%f " % item for item in value )
+                    datFile.writelines( "\n" )
+                except(TypeError):
+                    datFile.writelines( "%f\n" % value ) 
+        except(TypeError):
+            value = listDict[key]
             try:
                 datFile.writelines( "%f " % item for item in value )
                 datFile.writelines( "\n" )
