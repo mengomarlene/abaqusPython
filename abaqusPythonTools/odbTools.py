@@ -1,4 +1,22 @@
 
+def getNodeSetFromSurface(odb,surface):  
+    elements = surface.elements[0]
+    nodes = list()
+    for ele in elements:
+        for label in ele.connectivity: 
+            if label not in nodes:nodes.append(label)
+    myNodes = tuple(nodes)
+    newSet = odb.rootAssembly.NodeSetFromNodeLabels(name = surface.name, nodeLabels = ((elements[0].instanceName,myNodes),))
+    return newSet
+#-----------------------------------------------------
+def computeMeanOverElement(fieldValues):
+    if (len(fieldValues)%4):
+        print 'wrong field value or nb of IP/nodes per element'
+        return
+    newFieldValue = list()
+    for n in range(0,len(fieldValues)-1,4):
+        newFieldValue.append(sum(fieldValues[n:n+4])/4.)
+    return newFieldValue
 #-----------------------------------------------------
 def openOdb(odbName):
     if not odbName.endswith('.odb'):odbName+='.odb'

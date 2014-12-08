@@ -11,15 +11,6 @@ def getTime(odb):
     for frame in frames: time.append(frame.frameValue)
     return time
 #-----------------------------------------------------
-def computeMeanOverElement(fieldValues):
-    if (len(fieldValues)%4):
-        print 'wrong field value or nb of IP/nodes per element'
-        return
-    newFieldValue = list()
-    for n in range(0,len(fieldValues)-1,4):
-        newFieldValue.append(sum(fieldValues[n:n+4])/4.)
-    return newFieldValue
-#-----------------------------------------------------
 def getNCoord(odb, setName, sysC=None):
     '''
     gives initial coordinates of nodes
@@ -279,6 +270,13 @@ def getFinalResF2D(odb,setName,sysC=None):
 def getFinalS(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('S')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_ElementNodal()
+#-----------------------------------------------------
+def getFinalS_33(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('S')
+    values.setComponent('S33')
     values.setCoordSystem(sysC)
     return values.getFinalValue_ElementNodal()
 #-----------------------------------------------------

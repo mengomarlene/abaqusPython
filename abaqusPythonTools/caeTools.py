@@ -7,14 +7,13 @@ import math
 ## my abaqus module
 import abaqusTools
 
-def importAbaqusModules():
-    ## default abaqus modules
-    from abaqus import *
-    backwardCompatibility.setValues(reportDeprecated=False)
-    from abaqusConstants import *
-    #some caeModules seem not to be imported by abaqus cae in noGUI,
-    #let's import all of them here!!
-    from caeModules import *
+## default abaqus modules
+from abaqus import *
+backwardCompatibility.setValues(reportDeprecated=False)
+from abaqusConstants import *
+#some caeModules seem not to be imported by abaqus cae in noGUI,
+#let's import all of them here!!
+from caeModules import *
 #-----------------------------------------------------
 def getParameters(_p={}):
     param = {}
@@ -113,7 +112,6 @@ def setElementType(eleTypeString):
     if eleTypeString=='C3D8RH': eleType = mesh.ElemType(C3D8RH, hourglassControl=ENHANCED)
     else:eleType = mesh.ElemType(C3D8R, hourglassControl=ENHANCED)
     return eleType
-
 #-----------------------------------------------------
 def createHollowCylinderPart(center,innerRadius,outerRadius,height,name,model,angle=360):
     myCercle = model.ConstrainedSketch(name+'_sketch',sheetSize=250.)
@@ -152,7 +150,6 @@ def getEandNu(holzapfelParam):
 #-----------------------------------------------------
 #-----------------------------------------------------
 def analysisWithPartitionCylinders(p):
-    importAbaqusModules()
     # check parameter consistency
     if len(p['nbCut']) != p['nbParts']: raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
     if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
@@ -377,7 +374,6 @@ def analysisWithPartitionCylinders(p):
 ##################################################################################
 ##################################################################################  
 def analysisWithPartialCylinders(p):
-    importAbaqusModules()
     # check parameter consistency
     if len(p['nbCut']) != p['nbParts']:  raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
     if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
@@ -561,7 +557,6 @@ def analysisWithPartialCylinders(p):
 ##################################################################################
 ##################################################################################    
 def analysisWithCylinders(p):
-    importAbaqusModules()
     # check parameter consistency
     if len(p['myMaterialName']) != p['nbParts']: raise Exception("number of material names as to be equal to the number of parts!!")
     if not p['stupidMaterial']:
@@ -736,7 +731,6 @@ def analysisWithCylinders(p):
 ##################################################################################
 ##################################################################################
 def lamellarRectangle(p):
-    importAbaqusModules()
 
 	# MODEL
     myModel = mdb.Model(p['modelName'])
@@ -864,7 +858,6 @@ def lamellarRectangle(p):
     return myNewJob,mdb
 ##################################################################################    
 def analysisWithRectangles(p):
-    importAbaqusModules()
     # check parameter consistency
     if len(p['myMaterialName']) != p['nbParts']:  raise Exception("number of material names as to be equal to the number of parts!!")
     if not p['stupidMaterial']:
