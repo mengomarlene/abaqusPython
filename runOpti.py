@@ -1,7 +1,7 @@
 import parameterFit
 import os
-
-expDir = dir = os.path.join(os.getcwd(),'HexModelsOfRadialTests')
+mainDir = os.path.join(os.path.dirname(os.getcwd()),'myModels')
+expDir = dir = os.path.join(mainDir,'HexModelsOfRadialTests')
 feModelDir = os.path.join(expDir,'cohesiveOpti')
 
 optiParam = {}
@@ -12,7 +12,7 @@ optiParam['ftol'] = 1e-6 # tolerance on the function value
 # coheValues = (1.,10.,100.,1000.)
 # output = list()
 # for value in coheValues:
-    # res = parameterFitParr_LMA.residuals([value,value], feModelDir, expDir, modelType='Int')
+    # res = parameterFit.residuals([value,value], feModelDir, expDir, modelType='Int')
     # output.append(res)
 # minValue = coheValues[output.index(min(output))]
 # p0 = [minValue,minValue]
@@ -21,9 +21,8 @@ optiParam['ftol'] = 1e-6 # tolerance on the function value
 coheValue = 0.24/(3.98/10.5) #mean testing length = 3.98, mean nb of lamellae = 10.5; C10 = 0.04 ==> E = .24
 p0 = [coheValue,coheValue]
 bounds = [(coheValue/100.,coheValue*5.),(coheValue/100.,coheValue*5.)]
-
 #perform optimisation
-p,fVal,info = parameterFitParr_LMA.main(p0, expDir, feModelDir, pBounds=bounds,options=optiParam, modelType='Int')
+p,fVal,info = parameterFit.main(p0, expDir, feModelDir, pBounds=bounds,options=optiParam, modelType='int')
 
 #plot results
 # import numpy as np

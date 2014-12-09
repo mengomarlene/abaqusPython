@@ -24,17 +24,17 @@ def matrixStiffnessExtractor(odbName):
             masterName = 'MASTER%d'%(i+1)
             slaveName = 'SLAVE%d'%(i+1)
             copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
-            cpress = cExt.getFinalCPressure(myOdb,masterName,slaveName)
-            contactStiffness = -min(cpress)/max(copen)
             totalCoheOpen += max(copen)
         extDispl = np.mean(ext.getFinalU_3(myOdb,'outerFace'))
         surfStress = np.mean(ext.getFinalS_33(myOdb,'outerFace'))
         matrixOpen = (extDispl-totalCoheOpen)/thisNb#elongation of each part if it is uniform
-        matrixStiffness = [surfStress/matrixOpen,contactStiffness]
-        valuesToWrite = dict(matrixStiffness=matrixStiffness)    
+        valuesToWrite = dict(matrixStiffness=surfStress/matrixOpen)    
         odbTools.writeValues(valuesToWrite)
         myOdb.close()
-
+        
+def stiffnessesExtractor(odbName):
+    matrixStiffnessExtractor(odbName)
+    contactStiffnessExtractors(odbName)
         
 def contactStiffnessExtractors(odbName):    
     keysToWrite = ['contactStiffness']
