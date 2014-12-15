@@ -901,6 +901,7 @@ def analysisWithRectangles(p):
                 if p['twoDirections']: myMat.Hyperelastic(table=(matParam,),materialType=ANISOTROPIC,anisotropicType=HOLZAPFEL, behaviorType=COMPRESSIBLE,localDirections=2)
                 else: myMat.Hyperelastic(table=(matParam,),materialType=ANISOTROPIC,anisotropicType=HOLZAPFEL, behaviorType=COMPRESSIBLE,localDirections=1)
         elif p['matType'] == 'neoHooke': myMat.Hyperelastic(testData=OFF,table=((E/(4*(1.+nu)),6*(1-2.*nu)/E),),materialType=ISOTROPIC,type=NEO_HOOKE, behaviorType=COMPRESSIBLE)
+        print "C10,K =  ",E/(4*(1.+nu)),6*(1-2.*nu)/E
         # assign material
         abaqusTools.assignMaterialToPart(p['myMaterialName'][rec],myPart,myModel,orientation=None)
         instances.append(abaqusTools.createInstanceAndAddtoAssembly(myPart,myAssembly,translate=(0,0,p['length']/p['nbParts']*rec)))

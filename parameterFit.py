@@ -124,8 +124,7 @@ def callbackF(p):
 def getOptiParam(p0, modelsDir, expDir, optiParam, pBounds=[0.,1.], modelType='Int'):
     opts = {'maxiter':optiParam['maxEval'],'disp':True,'ftol':optiParam['ftol']}
     from scipy.optimize import minimize
-    # res = minimize(residuals, p0, method='L-BFGS-B', args=(modelsDir, expDir, modelType), jac=False, bounds=pBounds, tol=optiParam['ftol'], options = opts,callback=callbackF)
-    res = minimize(residuals, p0, method='TNC', args=(modelsDir, expDir, modelType), jac=False, bounds=pBounds, tol=optiParam['ftol'], options = opts,callback=callbackF)#simple conjugate gradient
+    res = minimize(residuals, p0, method='L-BFGS-B', args=(modelsDir, expDir, modelType), jac=False, bounds=pBounds, tol=optiParam['ftol'], options = opts,callback=callbackF)
     pLSQ = res.x
     fVal = res.fun
     d = {}

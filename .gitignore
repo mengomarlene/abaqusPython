@@ -2,3 +2,5 @@ workspace/
 *.pyc
 *.wmv
 *.py.bak
+*.ascii
+iterate.dat
