@@ -73,7 +73,7 @@ def getParameters(_p={}):
                   equivalent (fibres) C10 = 1.4651 MPa (see matlabScripts/plotFullStress)
         kappa=0. for perfectly oriented; 1/3 for isotropic
     '''
-    param['holzapfelParameters'] = (.0377/2., 9.09e-4, 3., 45., 0.)
+    param['holzapfelParameters'] = (0.022, 9.09e-4, 23.92, 1045.7, 0.)#ovine anterior
     param['fiberDirection'] = [math.pi/6.,-math.pi/6.]#list of fiber angles in the (theta,z) plane
     param['twoDirections'] = False#creates a material with two complementary directions given by fiberDirections instead of two materials with one direction each
     #MESH
@@ -151,9 +151,9 @@ def getEandNu(holzapfelParam):
 #-----------------------------------------------------
 def analysisWithPartitionCylinders(p):
     # check parameter consistency
-    if len(p['nbCut']) != p['nbParts']: raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
-    if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
-    if any(360%i for i in p['nbCut']): raise Exception("number of cuts per part must be a divider of 360!!")
+    assert (len(p['nbCut']) == p['nbParts']), "nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!"
+    assert (len(p['myMaterialName']) == sum(p['nbCut'])), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
+    assert not any(360%i for i in p['nbCut']), "number of cuts per part must be a divider of 360!!"
 
     # MODEL
     myModel = mdb.Model(p['modelName'])
@@ -375,9 +375,9 @@ def analysisWithPartitionCylinders(p):
 ##################################################################################  
 def analysisWithPartialCylinders(p):
     # check parameter consistency
-    if len(p['nbCut']) != p['nbParts']:  raise Exception("nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!")
-    if len(p['myMaterialName']) != sum(p['nbCut']): raise Exception("number of material names as to be equal to the number of domains (total nb of cuts)!!")
-    if any(360%i for i in p['nbCut']): raise Exception("number of cuts per part must be a divider of 360!!")
+    assert (len(p['nbCut']) == p['nbParts']), "nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!"
+    assert (len(p['myMaterialName']) == sum(p['nbCut'])), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
+    assert not any(360%i for i in p['nbCut']), "number of cuts per part must be a divider of 360!!"
 
     ## MODEL
     myModel = mdb.Model(p['modelName'])
@@ -558,9 +558,11 @@ def analysisWithPartialCylinders(p):
 ##################################################################################    
 def analysisWithCylinders(p):
     # check parameter consistency
-    if len(p['myMaterialName']) != p['nbParts']: raise Exception("number of material names as to be equal to the number of parts!!")
+    assert (len(p['myMaterialName']) == p['nbParts']), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
     if not p['stupidMaterial']:
-        if len(p['fiberDirection']) != p['nbParts']: raise Exception("number of fiber directions as to be equal to the number of parts!!")
+        assert (len(p['fiberDirection']) != p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
+
+
 	# MODEL
     myModel = mdb.Model(p['modelName'])
     myAssembly = myModel.rootAssembly
@@ -859,9 +861,9 @@ def lamellarRectangle(p):
 ##################################################################################    
 def analysisWithRectangles(p):
     # check parameter consistency
-    if len(p['myMaterialName']) != p['nbParts']:  raise Exception("number of material names as to be equal to the number of parts!!")
+    assert (len(p['myMaterialName']) == p['nbParts']), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
     if not p['stupidMaterial']:
-        if len(p['fiberDirection']) != p['nbParts']: raise Exception("number of fiber directions as to be equal to the number of parts!!")
+        assert (len(p['fiberDirection']) != p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
 	# MODEL
     myModel = mdb.Model(p['modelName'])
     myAssembly = myModel.rootAssembly

@@ -20,15 +20,24 @@ def matrixStiffnessExtractor(odbName):
         myOdb = odbTools.openOdb(odbName)
         thisNb = len(myOdb.parts.keys())
         totalCoheOpen = 0
+        slip1 = [0.]
+        slip2 = [0.]
         for i in range(thisNb-1):
             masterName = 'MASTER%d'%(i+1)
             slaveName = 'SLAVE%d'%(i+1)
+            masterSurface = myOdb.rootAssembly.surfaces[masterName]
             copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
+            slip1.append(max(ext.getFinalU_1(myOdb,odbTools.getNodeSetFromSurface(myOdb,masterSurface))))
+            slip2.append(max(ext.getFinalU_2(myOdb,odbTools.getNodeSetFromSurface(myOdb,masterSurface))))
             totalCoheOpen += max(copen)
         extDispl = np.mean(ext.getFinalU_3(myOdb,'outerFace'))
-        surfStress = np.mean(ext.getFinalS_33(myOdb,'outerFace'))
+        surfStress13 = max(ext.getFinalS_13(myOdb,'outerFace'))
+        surfStress23 = max(ext.getFinalS_23(myOdb,'outerFace'))
+        surfStress33 = np.mean(ext.getFinalS_33(myOdb,'outerFace'))
+        slip1.append(max(ext.getFinalU_1(myOdb,'outerFace')))
+        slip2.append(max(ext.getFinalU_2(myOdb,'outerFace')))
         matrixOpen = (extDispl-totalCoheOpen)/thisNb#elongation of each part if it is uniform
-        valuesToWrite = dict(matrixStiffness=surfStress/matrixOpen)    
+        valuesToWrite = dict(matrixStiffness=[surfStress33/matrixOpen,surfStress13/max(np.diff(slip1)),surfStress23/max(np.diff(slip2))])    
         odbTools.writeValues(valuesToWrite)
         myOdb.close()
         
@@ -54,7 +63,11 @@ def contactStiffnessExtractors(odbName):
         slaveName = 'SLAVE1'
         copen = cExt.getFinalCOpening(myOdb,masterName,slaveName)
         cpress = cExt.getFinalCPressure(myOdb,masterName,slaveName)
-        contactStiffness = min(cpress)/max(copen)#[-cpress[node]/copen[node] for node in range(len(copen))]#cpress negative in tension
+        cslip1 = cExt.getFinalCSlip1(myOdb,masterName,slaveName)
+        cshear1 = cExt.getFinalCShearStress1(myOdb,masterName,slaveName)
+        cslip2 = cExt.getFinalCSlip2(myOdb,masterName,slaveName)
+        cshear2 = cExt.getFinalCShearStress2(myOdb,masterName,slaveName)
+        contactStiffness = [-min(cpress)/max(copen),max(cshear1)/max(cslip1),max(cshear2)/max(cslip2)]#[-cpress[node]/copen[node] for node in range(len(copen))]#cpress negative in tension
         valuesToWrite = dict(contactStiffness=contactStiffness)    
         odbTools.writeValues(valuesToWrite)
         myOdb.close()
