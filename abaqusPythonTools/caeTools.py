@@ -101,7 +101,7 @@ def getParameters(_p={}):
     #JOB
     param['modelName'] = 'defaultName'
     param['scratchDir'] = '.'
-    param['numCpus'] = 1
+    param['numCpus'] = 16
     param['saveCaeFile'] = True
     #
     param.update(_p)
@@ -560,7 +560,7 @@ def analysisWithCylinders(p):
     # check parameter consistency
     assert (len(p['myMaterialName']) == p['nbParts']), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
     if not p['stupidMaterial']:
-        assert (len(p['fiberDirection']) != p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
+        assert (len(p['fiberDirection']) == p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
 
 
 	# MODEL
@@ -861,9 +861,10 @@ def lamellarRectangle(p):
 ##################################################################################    
 def analysisWithRectangles(p):
     # check parameter consistency
+    print (len(p['myMaterialName']) == p['nbParts'])
     assert (len(p['myMaterialName']) == p['nbParts']), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
     if not p['stupidMaterial']:
-        assert (len(p['fiberDirection']) != p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
+        assert (len(p['fiberDirection']) == p['nbParts']), "number of fiber directions as to be equal to the number of parts!!"
 	# MODEL
     myModel = mdb.Model(p['modelName'])
     myAssembly = myModel.rootAssembly
