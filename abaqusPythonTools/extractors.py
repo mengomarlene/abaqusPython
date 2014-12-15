@@ -273,6 +273,20 @@ def getFinalS(odb,setName,sysC=None):
     values.setCoordSystem(sysC)
     return values.getFinalValue_ElementNodal()
 #-----------------------------------------------------
+def getFinalS_13(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('S')
+    values.setComponent('S33')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_ElementNodal()
+#-----------------------------------------------------
+def getFinalS_23(odb,setName,sysC=None):
+    values = valueExtractor.ValueExtractor(odb,setName)
+    values.setField('S')
+    values.setComponent('S33')
+    values.setCoordSystem(sysC)
+    return values.getFinalValue_ElementNodal()
+#-----------------------------------------------------
 def getFinalS_33(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('S')
