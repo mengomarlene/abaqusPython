@@ -23,8 +23,10 @@ def computeFEData(p,modelsDir,modelType='Int'):
 
 def runModel(p,modelScript,modelsDir):
     baseName = os.path.dirname(os.path.abspath(__file__))
+    import sys
+    sys.path.append(os.path.dirname(os.getcwd()))
     filePath = os.path.join(modelsDir,modelScript)
-    workspace = toolbox.getWorkspace(filePath,baseName)
+    workspace = toolbox.getWorkspace(filePath,baseName=baseName)
     if not(os.path.isdir(workspace)):
         try: os.makedirs(workspace)
         except WindowsError: print("file(s) probably locked!\n")
