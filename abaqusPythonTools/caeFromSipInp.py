@@ -31,7 +31,7 @@ def getParameters(_p={}):
     param['timePeriod'] = 1.
     param['nlgeom'] = False    
 
-    param['scratchDir'] = 'D:\Abaqus'
+    param['scratchDir'] = 'D:/Abaqus'
     param['numCpus'] = 1
     param['allowRestart'] = False
 
@@ -75,8 +75,8 @@ def createAnalysisFromSipExport(param):
 
     minInc = min(initInc,maxInc)/1000.
     myModel.StaticStep(initialInc=initInc ,timePeriod=param['timePeriod'], maxInc=maxInc, minInc=minInc, name='displ', nlgeom=nlGeom, previous='Initial',maxNumInc=10000)
-    ## ELEMENT INTEGRATION (to ensure hourglass control - may not be needed!!)
-    elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=STANDARD, hourglassControl=ENHANCED)
+    ## ELEMENT INTEGRATION (to ensure hourglass control and hybrid integration - may not be needed!!)
+    elemType1 = mesh.ElemType(elemCode=C3D8RH, elemLibrary=STANDARD, hourglassControl=ENHANCED)
     elemType2 = mesh.ElemType(elemCode=C3D4, elemLibrary=STANDARD)
     myPart.setElementType(regions=(myPart.elements,), elemTypes=(elemType1, elemType2))
     

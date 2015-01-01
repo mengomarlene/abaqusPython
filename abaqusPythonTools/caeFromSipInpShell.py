@@ -36,7 +36,7 @@ def getParameters(_p={}):
     param['timePeriod'] = 1.
     param['nlgeom'] = False
     
-    param['scratchDir'] = 'D:\Abaqus'
+    param['scratchDir'] = 'D:/Abaqus'
     param['numCpus'] = 1
 
     param.update(_p)
@@ -126,12 +126,12 @@ def createAnalysis(param):
             if 'tt01_01_noBScSegDS' in param['sipInpFile']:
                 if  myISet.has_key(dMin):
                     myModel.PinnedBC(createStepName='displ', localCsys=None, name='fix_%d'%(i), region=myISet[dMin])
-                if part == 'INPLANE5':
+                if part == 'SECTIONED5':
                     x1 = (1.10898,1.29364)
                     x2 = (1.29274,0.74189)
                     d1 = (0.134,-0.12)
                     d2 = (0.18,-0.10)
-                    for node in myISet['SF_%s_WITH_SECTIONNED6'%part].nodes:
+                    for node in myISet['SF_%s_WITH_INPLANE6'%part].nodes:
                         i += 1
                         abaqusTools.applyInterpolatedDisplacement(myModel,node,x1,x2,d1,d2,'mov_%d'%(i))
             elif 'tt02_02_CroppedNoBScSegDS' in param['sipInpFile']:
