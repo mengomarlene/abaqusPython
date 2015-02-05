@@ -118,10 +118,19 @@ class ContactValueExtractor:
         self.master = masterSurf#either a string or a set object
         self.slave = slaveSurf#either a string or a set object
         self.fieldKey = 'COPEN'
+        self.componentLabel = None
+        self.invariant = None
+        self.sysC = None
         self.stepName = None
     #-----------------------------------------------------
     def setField(self,fieldKey):
         self.fieldKey = fieldKey
+    def setComponent(self,componentLabel):
+        self.componentLabel = componentLabel
+    def setInvariant(self,invariant):
+        self.invariant = invariant
+    def setCoordSystem(self,sysC):
+        self.sysC = sysC#a datum 
     def setStepName(self,stepName):
         self.stepName = stepName
     #-----------------------------------------------------
@@ -148,7 +157,7 @@ class ContactValueExtractor:
             fieldName = self.fieldKey+' '*(9-len(self.fieldKey))
             try:#setName is a string
                 assembly = self.odb.rootAssembly
-                if ('INSTANCE'  in self.master) and ('INSTANCE'  in self.slave):#surface name are part surfaces
+                if ('INSTANCE'  in self.master) and ('INSTANCE' in self.slave):#surface name are part surfaces
                     iName = self.master.split('.')[0]
                     iSetName = self.master.split('.')[1]
                     try:
@@ -159,17 +168,21 @@ class ContactValueExtractor:
                         slaveSurf = assembly.instances[iName].nodeSets[iSetName.upper()]
                 else:#surfaces names are assembly surfaces
                     try:
-                        masterSurf = assembly.surfaces[self.master]
-                        slaveSurf = assembly.surfaces[self.slave]
-                        masterName = 'ASSEMBLY_'+self.master
-                        slaveName = 'ASSEMBLY_'+self.slave
+                        masterSurf = assembly.surfaces[self.master.upper()]
+                        slaveSurf = assembly.surfaces[self.slave.upper()]
+                        masterName = 'ASSEMBLY_'+self.master.upper()
+                        slaveName = 'ASSEMBLY_'+self.slave.upper()
                     except(KeyError):
-						print assembly.surfaces
+						#print assembly.surfaces,self.master,self.slave
 						raise Exception("unknown master/slave surface names")
             except(TypeError):#surfaces are object
 				masterName = 'ASSEMBLY_'+self.master.name
 				slaveName = 'ASSEMBLY_'+self.slave.name
             fieldName += slaveName+'/'+masterName
             theField = frame.fieldOutputs[fieldName]
+            if self.sysC is not None:
+                theField = theField.getTransformedField(datumCsys=self.sysC)
+            if self.componentLabel is not None:theField = theField.getScalarField(componentLabel=self.componentLabel)
+            elif self.invariant is not None:theField = theField.getScalarField(invariant=self.invariant)
             value = [ptValue.data for ptValue in theField.values]
         return value

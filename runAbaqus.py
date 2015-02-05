@@ -102,8 +102,14 @@ def runPostPro(file,workspace=None):
                 odbName = name
                 break
         if odbName is None: raise Exception("no odb file in %s!"%(workspace))
-        _temp = __import__(toolbox.fileToModule(file), globals(), locals(), ['postPro'], -1)
-        # in python 2.7 and above, __import__ should be repaced by importlib.import_module
+        versionInfo = sys.version_info
+        assert versionInfo[0]==2,"need to use python 2.x version"
+        module= toolbox.fileToModule(file)
+        if versionInfo[1]<7:
+            _temp = __import__(module, globals(), locals(), ['postPro'], -1)
+        else:# in python 2.7 and above, __import__ should be replaced by importlib.import_module
+            import importlib
+            _temp = importlib.import_module(module)
         os.chdir(workspace)
         _temp.postPro(odbName)
         os.chdir(baseName)

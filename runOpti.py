@@ -22,7 +22,7 @@ coheValue = 0.24/(3.98/10.5) #mean testing length = 3.98, mean nb of lamellae = 
 p0 = [coheValue,coheValue]
 bounds = [(coheValue/100.,coheValue*5.),(coheValue/100.,coheValue*5.)]
 #perform optimisation
-p,fVal,info = parameterFit.main(p0, expDir, feModelDir, pBounds=bounds,options=optiParam, modelType='Int')
+p,fVal,info = parameterFit.main(p0, expDir, feModelDir, pBounds=bounds,options=optiParam, modelType='int')
 
 #plot results
 # import numpy as np

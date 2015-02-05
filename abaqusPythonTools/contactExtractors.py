@@ -32,12 +32,46 @@ def getCPressure(odb,masterName,slaveName):
 def getFinalCNormalForce(odb,masterName,slaveName):
     values = valueExtractor.ContactValueExtractor(odb,masterName,slaveName)
     values.setField('CNORMF')
-    return values.getFinalValue()
+    vector = values.getFinalValue()
+    return vector.norm()
 #-----------------------------------------------------
 def getCNormalForce(odb,masterName,slaveName):
     values = valueExtractor.ContactValueExtractor(odb,masterName,slaveName)
     values.setField('CNORMF')
-    return values.getEvolution()
+    vector = values.getEvolution()
+    return vector.norm()
+#-----------------------------------------------------
+def getCNormalForce_1(odb,masterName,slaveName):
+    values = valueExtractor.ContactValueExtractor(odb,masterName,slaveName)
+    values.setField('CNORMF')
+    values.setComponent('CNF1')
+    vector = values.getEvolution()
+    resForce = [sum([a for a in vecValue if a>0 ]) for vecValue in vector]
+    return resForce
+#-----------------------------------------------------
+def getCNormalForce_2(odb,masterName,slaveName):
+    values = valueExtractor.ContactValueExtractor(odb,masterName,slaveName)
+    values.setField('CNORMF')
+    values.setComponent('CNF2')
+    vector = values.getEvolution()
+    resForce = [sum([a for a in vecValue if a>0 ]) for vecValue in vector]
+    return resForce
+#-----------------------------------------------------
+def getCNormalForce_3(odb,masterName,slaveName):
+    values = valueExtractor.ContactValueExtractor(odb,masterName,slaveName)
+    values.setField('CNORMF')
+    values.setComponent('CNF3')
+    vector = values.getEvolution()
+    resForce = [sum([a for a in vecValue if a>0 ]) for vecValue in vector]
+    return resForce
+#-----------------------------------------------------
+def getCNormalForce_Magnitude(odb,masterName,slaveName):
+    import math
+    cf1 = getCNormalForce_1(odb,masterName,slaveName)
+    cf2 = getCNormalForce_2(odb,masterName,slaveName)
+    cf3 = getCNormalForce_3(odb,masterName,slaveName)
+    resForce = [math.sqrt(vi*vi+vj*vj+vk*vk) for vi,vj,vk in zip(cf1,cf2,cf3)]
+    return resForce
 #-----------------------------------------------------
 # CSHEAR1
 #-----------------------------------------------------

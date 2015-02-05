@@ -101,7 +101,7 @@ def getParameters(_p={}):
     #JOB
     param['modelName'] = 'defaultName'
     param['scratchDir'] = '.'
-    param['numCpus'] = 16
+    param['numCpus'] = 8
     param['saveCaeFile'] = True
     #
     param.update(_p)

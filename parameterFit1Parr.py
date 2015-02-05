@@ -7,17 +7,18 @@ saveIntermediateValues = True
 NFeval = 0
 NIter = 0
 
-def computeFEData(p,modelsDir,modelType='Int'):
+def computeFEData(p,modelsDir):
     files = os.listdir(modelsDir)
     files.sort()
     modelList = list()
     for modelScript in files:
-        if (modelScript.endswith('.py')) and (modelType in modelScript): modelList.append(modelScript)
-    if len(modelList)==1: raise Exception("This script is not really useful for only one script ")
+        if (modelScript.endswith('.py')) and ('__init__' not in modelScript):
+            modelList.append(modelScript)
+    #if len(modelList)==1: raise Exception("This script is not really useful for only one script ")
     else:
         output = list()
         for model in modelList:
-            out1job = runModel(p,model,modelsDir)#?? will they run one after the other??? - NO!
+            out1job = runModel(p,model,modelsDir)
             output.append(out1job[0])
     return output,modelList
 
@@ -85,30 +86,29 @@ def saveValues(p, feData, value, no='final'):
         file.write('least square error %s\n'%value)
         file.write('\n'.join('%f ' %(x[0]) for x in feData))
 
-def residuals(p, modelsDir, expDir, modelType='Int'):
+def residuals(p, modelsDir, expDir):
     ''' residuals(p, expData) computes the diff (in a least square sense) between experimental data and FE data (function of p)
         p: set of parameters to optimize
-        expDir: directory experimental data to fit
+        expData: experimental data to fit, should be a 2D array (x,y)
     '''
     # compute FE data function of parameters only - should return a 2D array (x,y) of floats
     # ---------------
-    feData,modelNames = computeFEData(p,modelsDir,modelType)
+    feData,modelNames = computeFEData(p,modelsDir)
     #
     import numpy as np
     diff = list()
     for data,name in zip(feData,modelNames):
         #read data file
-        dataFile = os.path.join(expDir,name.split('.')[0]+'ExpStiffness.ascii')
-        #expData = 0
+        dataFile = os.path.join(expDir,name.split('.')[0]+'.ascii')
         with open(dataFile, 'r') as file: expData =  float(file.readline().split()[0])
         # add difference in list
-        if data[0]:diff.append((expData - data[0])/expData)
+        if data[0]: diff.append((expData - data[0])/expData)
     lstSq = 0
     for value in diff: lstSq+= value**2/(len(diff))
     global NFeval
     NFeval += 1
     if saveIntermediateValues: saveValues(p, feData, lstSq, NFeval)
-    return lstSq
+    return lstSq    
 
 def callbackF(p):
     global NIter,NFeval
@@ -121,11 +121,11 @@ def callbackF(p):
         file.write('evaluation number: %i\n'%(NFeval))
         file.write('parameter inputs: %s\n'%(p))
 
-def getOptiParam(modelsDir, expDir, optiParam, pBounds=None, modelType='Int'):
+def getOptiParam(modelsDir, expDir, optiParam, pBounds=None):
     from scipy.optimize import minimize_scalar
     opts = {'maxiter':optiParam['maxEval'],'disp':True}
     import numpy as np
-    res = minimize_scalar(residuals, bounds=pBounds, args=(modelsDir, expDir, modelType), tol=optiParam['ftol'], method='bounded')#, options=opts)
+    res = minimize_scalar(residuals, bounds=pBounds, args=(modelsDir, expDir), tol=optiParam['ftol'], method='bounded')#, options=opts)
     pLSQ = res.x
     fVal = res.fun
     d = {}
@@ -134,9 +134,9 @@ def getOptiParam(modelsDir, expDir, optiParam, pBounds=None, modelType='Int'):
     if verbose: print d
     return pLSQ,fVal,d
 
-def main(expDir, modelsDir, options={}, pBounds=None, modelType='Int'):
+def main(expDir, modelsDir, options={}, pBounds=None):
     optiParam = {}
     optiParam['maxEval']=10
     optiParam['ftol']=1e-8
     optiParam.update(options)
-    return getOptiParam(modelsDir, expDir, optiParam, pBounds, modelType)
+    return getOptiParam(modelsDir, expDir, optiParam, pBounds)
