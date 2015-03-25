@@ -14,7 +14,7 @@ def getParameters(_p={}):
 
     fileName = 'D:/myWork/MicroscopyModels/2DTensileTests/tt01_01_noBScSegDS.inp'
     fileName.replace('/',os.sep)
-    #either give a sip file with shell deifinition (in param['sipInpFile']) - or give a 2D inp file (in param['inpFile'])
+    #either give a sip file with shell definition (in param['sipInpFile']) - or give a 2D inp file (in param['inpFile'])
     param['sipInpFile'] = fileName
     param['inpFile'] = None
     param['modelName'] = 'tt01_01_nobridges'
@@ -26,7 +26,7 @@ def getParameters(_p={}):
     param['matType'] = 'Hooke'#or 'Holzapfel' or 'neoHooke'
     param['holzapfelParameters'] = (.02, 0.001, 23.9167, 1044.7, 0.)#OVINE anterior 24.8084  977.3121
     
-    param['fiberOrientation'] = math.pi/6. #(direction = vertical for inPlane lamellae, 2theta from the vertical for sectionned ones)
+    param['fiberOrientation'] = math.pi/6. #(direction = vertical for inPlane lamellae, 2theta from the vertical for sectioned ones)
 
     param['interfaceType'] = 'Tie'         #'Rough', 'Friction', 'CohesiveRough', 'Cohesive', 'CohesiveFriction'  
     param['frictionCoef'] = 0.1           #irrelevant if param['interfaceType']!='Friction' or  'CohesiveFriction'

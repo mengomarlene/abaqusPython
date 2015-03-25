@@ -180,8 +180,7 @@ class ContactValueExtractor:
 				slaveName = 'ASSEMBLY_'+self.slave.name
             fieldName += slaveName+'/'+masterName
             theField = frame.fieldOutputs[fieldName]
-            if self.sysC is not None:
-                theField = theField.getTransformedField(datumCsys=self.sysC)
+            if self.sysC is not None: theField = theField.getTransformedField(datumCsys=self.sysC)
             if self.componentLabel is not None:theField = theField.getScalarField(componentLabel=self.componentLabel)
             elif self.invariant is not None:theField = theField.getScalarField(invariant=self.invariant)
             value = [ptValue.data for ptValue in theField.values]
