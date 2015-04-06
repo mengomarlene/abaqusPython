@@ -8,6 +8,7 @@ class JobDefinition:
         self.fibreInputType = 'default'
         self.directions = None
         self.matNames = None
+        self.twoDirections = False
         
     def setScratchDir(self,scratch):
         self.scratch = scratch
@@ -15,6 +16,8 @@ class JobDefinition:
         self.isFibrous = True
     def setFibreInputType(self,type='default'):
         self.fibreInputType = type
+    def setPartitionTwoDirections(self):
+        self.twoDirections = True
     def fibreDirections(self,directions):
         self.directions = directions
     def setMatNames(self,matNames):
@@ -32,7 +35,7 @@ class JobDefinition:
             if self.fibreInputType == 'fromSip':
                 inputFile = introduceFiberDirectionFromSipFile(self.matNames,self.directions,self.name)
             elif self.fibreInputType == 'partition':
-                inputFile = introduceFiberDirectionPartition(self.matNames,self.directions,self.name)
+                inputFile = introduceFiberDirectionPartition(self.matNames,self.directions,self.name,self.twoDirections)
             elif self.fibreInputType == 'twoDirections':
                 inputFile = introduceTwoFiberDirections(self.directions,self.name)
             elif self.fibreInputType == 'twoDirectionsZVert':
@@ -141,7 +144,7 @@ def introduceFiberDirection(fiberDirections,jobName):
     print "writing inp file - done"
     return newInputFileName
 #-----------------------------------------------------
-def introduceFiberDirectionPartition(materialNames,fiberDirections,jobName):
+def introduceFiberDirectionPartition(materialNames,fiberDirections,jobName,twoDirections=False):
     #ok only if input file for which the orientation is cae built
     """
     inputs :
@@ -165,11 +168,17 @@ def introduceFiberDirectionPartition(materialNames,fiberDirections,jobName):
     for mat in range(len(materialNames)):
         idx = -1-mat
         for lineNb in solidSectionLine:	
-            oldLine = lines[lineNb-4]#this is why the comment at the beginnning of the function exists...
+            oldLine = lines[lineNb-4]#this is why the comment at the beginning of the function exists...
             if (materialNames[idx] in lines[lineNb]) and (not oldLine.endswith(',local directions=1\n')):
-                newLine = oldLine[0:-1]+',local directions=1\n'
-                lines[lineNb-4] = newLine
-                lines[lineNb-2] += '%f,%f,%f\n'%(fiberDirections[idx][0],fiberDirections[idx][1],fiberDirections[idx][2])
+                if twoDirections:
+                    newLine = oldLine[0:-1]+',local directions=2\n'
+                    lines[lineNb-4] = newLine
+                    lines[lineNb-2] += '%f,%f,%f\n'%(fiberDirections[mat][0],fiberDirections[mat][1],fiberDirections[mat][2])
+                    lines[lineNb-2] += '%f,%f,%f\n'%(fiberDirections[mat][0],fiberDirections[mat][1],-fiberDirections[mat][2])
+                else:
+                    newLine = oldLine[0:-1]+',local directions=1\n'
+                    lines[lineNb-4] = newLine
+                    lines[lineNb-2] += '%f,%f,%f\n'%(fiberDirections[idx][0],fiberDirections[idx][1],fiberDirections[idx][2])
     newInputFileName = jobName+'FibresIn.inp'
     newInpFile = open(newInputFileName, 'w')
     newInpFile.writelines(lines)

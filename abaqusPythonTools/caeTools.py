@@ -22,9 +22,9 @@ def getParameters(_p={}):
     param['nbCut'] = [2,2]
     param['innerRadius'] = 12.
     param['lamellarThickness'] = .6
+    param['center'] = (0.,0.)
     param['height'] = 12.
     param['width'] = 5.#for cuboid models
-    param['center'] = (0.,0.)
     param['length'] = 25.#for rectangular lamellae and cuboids
     #MATERIAL
     param['myMaterialName'] = ['AFPositif','AFNegatif']
@@ -78,7 +78,7 @@ def getParameters(_p={}):
     param['twoDirections'] = False#creates a material with two complementary directions given by fiberDirections instead of two materials with one direction each
     #MESH
     param['meshType'] = 'seedEdgeByNumber'      #'seedEdgeBySize','seedEdgeByNumber','seedPartInstance'
-    param['meshControl'] = 40                   #size for 'seedPartInstance' or 'seedEdgeBySize', 
+    param['meshControl'] = 80                   #size for 'seedPartInstance' or 'seedEdgeBySize', 
                                                 #number for 'seedEdgeByNumber'
     param['elemType'] = 'C3D8RH'
     #INTERACTIONS
@@ -98,6 +98,8 @@ def getParameters(_p={}):
     param['loadMagnitude'] = 0.07 # [MPa] 12Rings --> area~700mm^2 --> force~50N
     param['displ'] = 0.1*param['height']
     param['internalPressure'] = None
+    #NUCLEUS
+    param['withNucleus'] = False
     #JOB
     param['modelName'] = 'defaultName'
     param['scratchDir'] = '.'
@@ -154,7 +156,8 @@ def analysisWithPartitionCylinders(p):
     assert (len(p['nbCut']) == p['nbParts']), "nbCut is a list of number of cut for each lamellae, its length must be equal to nbParts!!"
     assert (len(p['myMaterialName']) == sum(p['nbCut'])), "number of material names as to be equal to the number of domains (total nb of cuts)!!"
     assert not any(360%i for i in p['nbCut']), "number of cuts per part must be a divider of 360!!"
-
+    assert not (p['withNucleus'] and p['internalPressure']), "do not set internal pressure if nucleus is modelled"
+    
     # MODEL
     myModel = mdb.Model(p['modelName'])
     myAssembly = myModel.rootAssembly
@@ -166,7 +169,7 @@ def analysisWithPartitionCylinders(p):
     topFace = list()
     innerFace = list()
     outerFace = list()
-
+    matNames = list()
     for cyl in range(p['nbParts']):
         #geometry
         angle = 360/p['nbCut'][cyl]
@@ -200,6 +203,7 @@ def analysisWithPartitionCylinders(p):
             middlePt = (r0*math.cos(angle*(arc+.5)*math.pi/180),p['height']/2,r0*math.sin(angle*(arc+.5)*math.pi/180))
             pickedCells2 = parts.cells.findAt((middlePt,))
             # create material
+            matNames.append(p['myMaterialName'][domainNb])
             myMat = myModel.Material(name=p['myMaterialName'][domainNb])
             if isinstance(p['holzapfelParameters'],list) and len(p['holzapfelParameters']) == int(sum(p['nbCut'])):#there is one set of parameters per cut
                 matParam = p['holzapfelParameters'][domainNb]
@@ -240,6 +244,7 @@ def analysisWithPartitionCylinders(p):
             ptMeshW.append((rm*math.cos(angle*arc*math.pi/180),0,rm*math.sin(angle*arc*math.pi/180)))
             ptMeshW.append((rm*math.cos(angle*arc*math.pi/180),p['height'],rm*math.sin(angle*arc*math.pi/180)))
 
+        if matParam[1]:p['elemType']='C3D8R'
         if 'Edge' in p['meshType']:
             intEdge = instances[cyl].edges.getSequenceFromMask(mask=('[#1 ]', ), )
             extEdge = instances[cyl].edges.getSequenceFromMask(mask=('[#4 ]', ), )
@@ -256,6 +261,46 @@ def analysisWithPartitionCylinders(p):
             ,edges=edge)
         else:
             abaqusTools.assignElemtypeAndMesh(instances[cyl],myAssembly,setElementType(p['elemType']),control=p['meshControl'],meshType=p['meshType'])
+
+    ## SETS FOR OUTPUT ANALYSIS
+    intVerticalEdge = instances[0].edges.getSequenceFromMask(mask=('[#1 ]', ), )
+    extVerticalEdge = instances[-1].edges.getSequenceFromMask(mask=('[#4 ]', ), )
+    myAssembly.Set(edges=intVerticalEdge, name='intVerticalSegment')
+    myAssembly.Set(edges=extVerticalEdge, name='extVerticalSegment')
+    myAssembly.Set(faces=tuple(topFace), name='topFaces')
+    myAssembly.Set(faces=tuple(bottomFace), name='bottomFaces')
+            
+    if p['withNucleus']:
+        #geometry
+        angle = 360
+        cylinderName = 'nucleus'
+        r0 = 0.
+        r1 = p['innerRadius']
+        rm = (r1+r0)/2.
+        parts = createHollowCylinderPart(p['center'],r0,r1,p['height'],cylinderName,myModel)
+        bottomPoint = (rm*math.cos(angle*(.5)*math.pi/180),0,rm*math.sin(angle*(.5)*math.pi/180))
+        topPoint = (rm*math.cos(angle*(.5)*math.pi/180),p['height'],rm*math.sin(angle*(.5)*math.pi/180))
+        outerPoint = (r1*math.cos(angle*(.5)*math.pi/180),p['height']/2,r1*math.sin(angle*(.5)*math.pi/180))
+        # material
+        myMat = myModel.Material(name='nucleus')
+        myMat.Hyperelastic(testData=OFF,table=((0.00025,0.0),),materialType=ISOTROPIC,type=NEO_HOOKE,behaviorType=INCOMPRESSIBLE)
+        abaqusTools.assignMaterialToPart('nucleus',parts,myModel)
+        #instance and faces
+        instances.append(abaqusTools.createInstanceAndAddtoAssembly(parts,myAssembly))
+        bottomFace.append(instances[-1].faces.findAt((bottomPoint,)))
+        topFace.append(instances[-1].faces.findAt((topPoint,)))
+        #mesh
+        abaqusTools.assignElemtypeAndMesh(instances[-1],myAssembly,setElementType('C3D8RH'),control=.8)
+        #nucleus/annulus connection (frictionless contact)
+        innerAnnulus = tuple(innerFace[i] for i in range(p['nbCut'][0]))
+        outerNucleus = instances[-1].faces.findAt((outerPoint,))
+        masterSurface = myAssembly.Surface(name='innerAnnulus',side1Faces=innerAnnulus)
+        slaveSurface = myAssembly.Surface(name='outerNucleus',side1Faces=outerNucleus)
+        from interactions import Interactions
+        inter = Interactions(myModel)
+        inter.setMasterSlave(masterSurface,slaveSurface)
+        inter.setName('annulusNucleusInterface')
+        inter.createInteraction()
 
     if p['nbParts']>1:
         ##CONSTRAINTS - same for all interfaces!!
@@ -296,17 +341,17 @@ def analysisWithPartitionCylinders(p):
         # magnitude provided = PRESSURE
         myModel.Pressure(name='Pressure',createStepName='Load',region=myTopSurface,magnitude=p['loadMagnitude'],
         distributionType=UNIFORM)
-        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
+        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'Pressure_total':
         #!!magnitude provided = total INITIAL FORCE, when the area varies -> force = magnitude*area1/area0!!
         myModel.Pressure(name='Pressure',createStepName='Load',region=myTopSurface,magnitude=p['loadMagnitude'],
         distributionType=TOTAL_FORCE)
-        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
+        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'vertDispl':
         myModel.DisplacementBC(name='Displ',createStepName='Load',region=tuple(topFace),u1=0.,u2=-p['displ'],u3=0.)
-        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
+        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'PressurePlane':
         import regionToolset
@@ -330,7 +375,7 @@ def analysisWithPartitionCylinders(p):
         follower=ON)
         myModel.DisplacementBC(name='BC-2', createStepName='Load', region=region, u1=0.0, u3=0.0, ur1=0.0, ur2=0.0, ur3=0.0,
         distributionType=UNIFORM)
-        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
+        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     else:#load only in internal pressure
         if p['internalPressure']:
@@ -341,15 +386,7 @@ def analysisWithPartitionCylinders(p):
         myInnerSurface = myAssembly.Surface(name='innerSurface',side1Faces=(innerFace[0],innerFace[1],))
         myModel.Pressure(name='intPressure',createStepName='Load',region=myInnerSurface,magnitude=p['internalPressure'],
         distributionType=UNIFORM)
-    
-    ## SETS FOR OUTPUT ANALYSIS
-    intVerticalEdge = instances[0].edges.getSequenceFromMask(mask=('[#1 ]', ), )
-    extVerticalEdge = instances[-1].edges.getSequenceFromMask(mask=('[#4 ]', ), )
-    myAssembly.Set(edges=intVerticalEdge, name='intVerticalSegment')
-    myAssembly.Set(edges=extVerticalEdge, name='extVerticalSegment')
-    myAssembly.Set(faces=tuple(topFace), name='topFaces')
-    myAssembly.Set(faces=tuple(bottomFace), name='bottomFaces')
-	
+    	
     ## OUTPUT REQUESTS
     fieldVariable = ('S', 'LE', 'U', 'RT', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
     # LOCALDIR1 added by default...
@@ -441,6 +478,7 @@ def analysisWithPartialCylinders(p):
             innerFace.append(instances[domainNb].faces.getSequenceFromMask(mask=('[#1 ]', ), ))
             topFace.append(instances[domainNb].faces.getSequenceFromMask(mask=('[#2 ]', ), ))
             outerFace.append(instances[domainNb].faces.getSequenceFromMask(mask=('[#4 ]', ), ))
+            if matParam[1]:p['elemType']='C3D8R'
             if 'Edge' in p['meshType']:
                 circEdges = instances[domainNb].edges.getSequenceFromMask(mask=('[#4 ]',),)
                 widthEdges = instances[domainNb].edges.getSequenceFromMask(mask=('[#8 ]',),)
@@ -630,7 +668,7 @@ def analysisWithCylinders(p):
         topFace.append(instances[cyl].faces.findAt((topFacePoint,)))
         outerFacePoint = (p['innerRadius']+p['lamellarThickness']*(cyl+1),p['height']/2.,0.)
         outerFace.append(instances[cyl].faces.findAt((outerFacePoint,)))
-        
+        if matParam[1]:p['elemType']='C3D8R'
         if 'Edge' in p['meshType']:
             circEdges = instances[cyl].edges.getSequenceFromMask(mask=('[#4 ]',),)
             widthEdges = instances[cyl].edges.getSequenceFromMask(mask=('[#8 ]',),)
