@@ -54,6 +54,7 @@ class CylAnnulus:
         self.bottomFaces = bottomFaces
         self.topFaces = topFaces
         self.abqModel = abqModel
+        self.punch = None
 
     def setCenter(self,centre):
         self.centre = centre
@@ -70,8 +71,10 @@ class CylAnnulus:
         assert (nb >= 1), "NbLamellae needs to be a positive integer: %i" %nb
     def setNbCuts(self,cuts):
         self.NbCuts = cuts
-    def setToIncompressible():
+    def setToIncompressible(self):
         self.isIncompressible = True
+    def cutWithPunch(self,punchPart):
+        self.punch = punchPart
         
     def create(self):
         # check parameter consistency
@@ -89,7 +92,7 @@ class CylAnnulus:
         for cyl in range(self.NbLamellae):
             #geometry
             angle = 360/self.NbCuts[cyl]
-            cylinderName = 'cylinder%d'%(cyl)
+            cylinderName = 'annulus%d'%(cyl)
             r0 = self.innerRadius+lamellarThickness*cyl
             r1 = self.innerRadius+lamellarThickness*(cyl+1)
             rm = (r1+r0)/2.
@@ -111,6 +114,9 @@ class CylAnnulus:
                 thisPart.PartitionCellByPatchNCorners(cell=pickedCells[0],cornerPoints=[thisPart.datums[pt1.id],
                 thisPart.datums[pt2.id], thisPart.datums[pt3.id], thisPart.datums[pt4.id]])
             thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly)
+            if self.punch:
+                cuttingInstance = abaqusTools.createInstanceAndAddtoAssembly(self.punch,myAssembly)
+                thisInstance = myAssembly.InstanceFromBooleanCut(name='cutNucleus', instanceToBeCut=thisInstance, cuttingInstances=(cuttingInstance, ), originalInstances=SUPPRESS)
             ptMeshC = list()
             ptMeshW = list()
             for arc in range(self.NbCuts[cyl]):
@@ -129,9 +135,9 @@ class CylAnnulus:
             ctrl = list()
             for n in range(2*self.NbCuts[cyl]):
                 edge.append(thisInstance.edges.findAt((ptMeshW[n],)))
-                ctrl.append(max(int(12/(self.NbLamellae)),3))#number of radial elements
+                ctrl.append(max(int(20/(self.NbLamellae)),3))#number of radial elements per lamellae
                 edge.append(thisInstance.edges.findAt((ptMeshC[n],)))
-                ctrl.append(int(80./self.NbCuts[cyl]))#number of circumferential elements=80
+                ctrl.append(int(100./self.NbCuts[cyl]))#number of circumferential elements=80
             if self.isIncompressible:
                 elemType=setElementType('C3D8RH')
             else:
@@ -160,6 +166,7 @@ class CylNucleus:
         self.bottomFaces = bottomFaces
         self.topFaces = topFaces
         self.abqModel = abqModel
+        self.punch = None
         
     def setCenter(self,centre):
         self.centre = centre
@@ -167,8 +174,10 @@ class CylNucleus:
         self.radius = radius
     def setHeight(self,height):
         self.discHeight = height
-    def setToCompressible():
+    def setToCompressible(self):
         self.isIncompressible = False
+    def cutWithPunch(self,punchPart):
+        self.punch = punchPart
 
     def create(self):
         myAssembly = self.abqModel.rootAssembly
@@ -180,6 +189,10 @@ class CylNucleus:
         self.outerPoint = (self.radius*math.cos(math.pi),self.discHeight/2,self.radius*math.sin(math.pi))
         #instance and faces
         thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly)
+        if self.punch:
+            cuttingInstance = abaqusTools.createInstanceAndAddtoAssembly(self.punch,myAssembly)
+            thisInstance = myAssembly.InstanceFromBooleanCut(name='cutNucleus', instanceToBeCut=thisInstance, cuttingInstances=(cuttingInstance, ), originalInstances=SUPPRESS)
+
         self.bottomFaces.append(thisInstance.faces.findAt((bottomPoint,)))
         self.topFaces.append(thisInstance.faces.findAt((topPoint,)))
         #mesh
@@ -187,9 +200,28 @@ class CylNucleus:
             elemType=setElementType('C3D8RH')
         else:
             elemType=setElementType('C3D8R')
-        abaqusTools.assignElemtypeAndMesh(thisInstance,myAssembly,elemType,control=.8)
+        abaqusTools.assignElemtypeAndMesh(thisInstance,myAssembly,elemType,control=.5)
         return thisInstance,thisPart
-
+#-----------------------------------------------------
+class cylHole:
+    '''
+    Class to define the geometry of a cylinder punch
+    '''
+    def __init__(self,abqModel):
+        self.centre = (0.,0.)
+        self.radius = 2.
+        self.height = 2.
+        self.abqModel = abqModel
+    def setCenter(self,centre):
+        self.centre = centre
+    def setRadius(self,radius):
+        self.radius = radius
+    def setHeight(self,height):
+        self.height = height
+    def create(self):
+        #geometry
+        thisPart = createHollowCylinderPart(self.centre,0.,self.radius,self.height,'hole',self.abqModel)
+        return thisPart
 #-----------------------------------------------------
 class annulusMaterial:
     def __init__(self,matName,matType,model):
@@ -218,12 +250,12 @@ class annulusMaterial:
                 else:
                     myMat.Hyperelastic(table=(self.matParam,),materialType=ANISOTROPIC,anisotropicType=HOLZAPFEL,behaviorType=COMPRESSIBLE,localDirections=1)
         elif self.matType == 'Yeoh':
-            if matParam[1]==0.:# incompressible
+            if self.matParam[1]==0.:# incompressible
                 myMat.Hyperelastic(testData=OFF, materialType=ISOTROPIC, type=YEOH, table=((E/(4*(1.+nu)), 23e-3, 0.024459, 0., 0., 0.), ),behaviorType=INCOMPRESSIBLE)
             else:
                 myMat.Hyperelastic(testData=OFF, materialType=ISOTROPIC, type=YEOH, table=((E/(4*(1.+nu)), 23e-3, 0.024459, 6*(1-2.*nu)/E, 6*(1-2.*nu)/E, 6*(1-2.*nu)/E), ),behaviorType=COMPRESSIBLE)
         else:# neo Hookean
-            if matParam[1]==0.:# incompressible
+            if self.matParam[1]==0.:# incompressible
                 myMat.Hyperelastic(testData=OFF,table=((E/(4*(1.+nu)),0.),),materialType=ISOTROPIC,type=NEO_HOOKE,behaviorType=INCOMPRESSIBLE)            
             else:
                 myMat.Hyperelastic(testData=OFF,table=((E/(4*(1.+nu)),6*(1-2.*nu)/E),),materialType=ISOTROPIC,type=NEO_HOOKE,behaviorType=COMPRESSIBLE)            

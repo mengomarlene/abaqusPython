@@ -31,7 +31,7 @@ class Interactions:
         self.allowSep = True
 
     def setFrictionBehaviour(self,fBehaviour,fCoef=0.1):
-        if fBehaviour not in ['Friction','Frictionless','Rough']: raise Exception("unkown friction behaviour - choose between 'Friction', or 'Frictionless', and 'Rough'")
+        if fBehaviour not in ['Friction','Frictionless','Rough']: raise Exception("unknown friction behaviour - choose between 'Friction', or 'Frictionless', and 'Rough'")
         else: 
             self.Friction = fBehaviour
             self.frictionCoef = fCoef
@@ -53,7 +53,7 @@ class Interactions:
                 self.abqModel.interactionProperties[iPropName]
             except:
                 contact = self.abqModel.ContactProperty(iPropName)
-                contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=10000.0)
+                contact.NormalBehavior(pressureOverclosure=HARD, stiffnessBehavior=LINEAR, contactStiffness=self.normalStiffness)
                 if self.Friction == 'Frictionless': contact.TangentialBehavior(formulation=FRICTIONLESS)
                 elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
                 elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)
@@ -73,7 +73,7 @@ class Interactions:
             else: self.abqModel.Tie(name=self.name,master=self.master,slave=self.slave)
         else:
             contact = self.abqModel.interactionProperties[self.name]
-            contact.NormalBehavior(pressureOverclosure=HARD, contactStiffness=10000.0)
+            contact.NormalBehavior(pressureOverclosure=HARD, stiffnessBehavior=LINEAR, contactStiffness=self.normalStiffness)
             if self.Friction == 'Frictionless':contact.TangentialBehavior(formulation=FRICTIONLESS)
             elif self.Friction == 'Friction': contact.TangentialBehavior(formulation=PENALTY,table=((self.frictionCoef, ), ),maximumElasticSlip=FRACTION,fraction=0.005)
             elif self.Friction == 'Rough': contact.TangentialBehavior(formulation=ROUGH)

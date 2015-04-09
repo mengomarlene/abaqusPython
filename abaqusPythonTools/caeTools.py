@@ -92,11 +92,13 @@ def getParameters(_p={}):
     param['timePeriod'] = 1.
     param['initialInc'] = 1e-5# needed for contact detection, can be larger for Tie
     param['maxInc'] = 0.08
-    param['minInc'] = min(1e-6,param['initialInc']/1000)
+    try:param['minInc'] = min(1e-6,_p['initialInc']/1000)
+    except(KeyError):param['minInc'] = min(1e-6,param['initialInc']/1000)
     #LOAD
     param['load'] = 'Pressure'
     param['loadMagnitude'] = 0.07 # [MPa] 12Rings --> area~700mm^2 --> force~50N
-    param['displ'] = 0.1*param['height']
+    try:param['displ'] = 0.1*_p['height']
+    except(KeyError):param['displ'] = 0.1*param['height']
     param['internalPressure'] = None
     #NUCLEUS
     param['withNucleus'] = False
@@ -329,6 +331,7 @@ def analysisWithPartitionCylinders(p):
     myModel.StaticStep(name='Load',previous='Initial',timePeriod=p['timePeriod'],initialInc=p['initialInc'],nlgeom=ON,
     maxInc=p['maxInc'],minInc=p['minInc'],maxNumInc=10000)
     myModel.steps['Load'].control.setValues(allowPropagation=OFF, resetDefaultValues=OFF, discontinuous=ON)
+    myModel.steps['Load'].solverControl.setValues(allowPropagation=OFF, resetDefaultValues=OFF, maxIterations=10)
     #,timeIncrementation=(0, 0, 0, 0, 10.0, 0, 12.0, 0, 0, 0, 50.0))
     #I0=4(nb equ ite),Ir=8,Ip=9,Ic=16,Il=10,Ig=4,Is=12,Ia=5,Ij=6,It=3,Isc=50 cannot change if discontinuous ON
 	
@@ -340,18 +343,17 @@ def analysisWithPartitionCylinders(p):
     if p['load'] =='Pressure':#default
         # magnitude provided = PRESSURE
         myModel.Pressure(name='Pressure',createStepName='Load',region=myTopSurface,magnitude=p['loadMagnitude'],
-        distributionType=UNIFORM)
-        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
+        distributionType=UNIFORM)       
+        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u2=0.,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'Pressure_total':
         #!!magnitude provided = total INITIAL FORCE, when the area varies -> force = magnitude*area1/area0!!
         myModel.Pressure(name='Pressure',createStepName='Load',region=myTopSurface,magnitude=p['loadMagnitude'],
         distributionType=TOTAL_FORCE)
-        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,localCsys=datumCyl)
+        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u2=0.,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'vertDispl':
-        myModel.DisplacementBC(name='Displ',createStepName='Load',region=tuple(topFace),u1=0.,u2=-p['displ'],u3=0.)
-        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
+        myModel.DisplacementBC(name='displ',createStepName='Load',region=tuple(topFace),u1=0.,u2=0.,u3=-p['displ'],localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'PressurePlane':
         import regionToolset
@@ -371,11 +373,10 @@ def analysisWithPartitionCylinders(p):
         myCrushingSurface = myAssembly.Surface(side1Faces=side1Faces1, name='crushingSurface')
         myModel.Tie(name='tieTop', master=myCrushingSurface, slave=myTopSurface)
         region = regionToolset.Region(referencePoints=(crushPlane.referencePoints[2], ))
-        myModel.ConcentratedForce(name='Load-1', createStepName='Load', region=region, cf2=-p['loadMagnitude'], distributionType=UNIFORM,
-        follower=ON)
-        myModel.DisplacementBC(name='BC-2', createStepName='Load', region=region, u1=0.0, u3=0.0, ur1=0.0, ur2=0.0, ur3=0.0,
-        distributionType=UNIFORM)
-        #if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
+        myModel.ConcentratedForce(name='Load-1', createStepName='Load', region=region, cf3=-p['loadMagnitude'], distributionType=UNIFORM,
+        follower=ON,localCsys=datumCyl)
+        myModel.DisplacementBC(name='BC-2', createStepName='Load', region=region, u1=0.0, u2=0.0, ur1=0.0, ur2=0.0, ur3=0.0,
+        distributionType=UNIFORM,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     else:#load only in internal pressure
         if p['internalPressure']:

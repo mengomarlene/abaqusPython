@@ -18,14 +18,14 @@ from caeModules import *
 def getParameters(_p={}):
     param = {}
     #GEOMETRY
-    param['nbLamellae'] = 2
-    param['nbCut'] = [2,2]
-    param['innerRadius'] = 12.
-    param['outerRadius'] = 20.
-    param['height'] = 12.
+    param['nbLamellae'] = 10
+    param['nbCut'] = [2,2,2,2,2,2,2,2,2,2]
+    param['innerRadius'] = 12.#mm
+    param['outerRadius'] = 20.#mm
+    param['height'] = 12.#mm
     #MATERIAL
     param['matType'] = 'neoHooke'#'Holzapfel' or 'neoHooke' or 'Yeoh'
-    '''holzapfelParameters: C10,D,k1,k2,kappa
+    '''holzapfelParameters: C10,D,k1,k2,kappa (MPa, MPa-1,MPa,-,-)
         ==========
         HUMAN DATA
         ==========
@@ -80,15 +80,19 @@ def getParameters(_p={}):
     #STEP
     param['timePeriod'] = 1.
     param['initialInc'] = 1e-5# needed for contact detection, can be larger for Tie
-    param['maxInc'] = 0.08
-    param['minInc'] = min(1e-6,param['initialInc']/1000)
+    try: param['maxInc'] = max(0.02,_p['initialInc']*2)
+    except(KeyError):param['maxInc'] = max(0.02,param['initialInc']*2)
+    try: param['minInc'] = min(1e-6,_p['initialInc']/1000)
+    except(KeyError):param['minInc'] = min(1e-6,param['initialInc']/1000)
     #LOAD
     param['load'] = 'Pressure'
     param['loadMagnitude'] = 0.07 # [MPa] 12Rings --> area~700mm^2 --> force~50N
-    param['displ'] = 0.1*param['height']
+    try:param['displ'] = 0.1*_p['height']
+    except(KeyError):param['displ'] = 0.1*param['height']
     param['internalPressure'] = None
     #NUCLEUS
     param['withNucleus'] = False
+    param['compressiveModulus'] = 0.4
     #JOB
     param['modelName'] = 'defaultName'
     param['scratchDir'] = '.'
@@ -113,6 +117,8 @@ def caeAnalysis(p):
     annulus.setHeight(p['height'])
     annulus.setNbLamellae(p['nbLamellae'])
     annulus.setNbCuts(p['nbCut'])
+    if p['matType'] != 'Holzapfel':
+        annulus.setToIncompressible()#will use hybrid elements for almost incompressible material - check if can be used for Holzapfel
     annulusParts = annulus.create()
 
     matNames = list()
@@ -156,11 +162,11 @@ def caeAnalysis(p):
         nucleus.setRadius(p['innerRadius'])
         nucleus.setHeight(p['height'])
         nucleusInstance,nucleusPart = nucleus.create()
-        # material
+        # material - compressive modulus H~2G (Neo-Hookean model of sig = H/2(lambda-1/lambda)) and C10=G/2  ==> C10 = H/4
         myMat = myModel.Material(name='nucleus')
-        myMat.Hyperelastic(testData=OFF,table=((0.00025,0.0),),materialType=ISOTROPIC,type=NEO_HOOKE,behaviorType=INCOMPRESSIBLE)
+        myMat.Hyperelastic(testData=OFF,table=((p['compressiveModulus']/4.,0.0),),materialType=ISOTROPIC,type=NEO_HOOKE,behaviorType=INCOMPRESSIBLE)
         abaqusTools.assignMaterialToPart('nucleus',nucleusPart,myModel)
-        #nucleus/annulus connection (frictionless contact)
+        #nucleus/annulus connection (rough contact)
         innerAnnulus = tuple(annulus.innerFaces[i] for i in range(p['nbCut'][0]))
         outerNucleus = nucleusInstance.faces.findAt((nucleus.outerPoint,))
         masterSurface = myAssembly.Surface(name='innerAnnulus',side1Faces=innerAnnulus)
@@ -169,6 +175,8 @@ def caeAnalysis(p):
         inter = Interactions(myModel)
         inter.setMasterSlave(masterSurface,slaveSurface)
         inter.setName('annulusNucleusInterface')
+        inter.setFrictionBehaviour('Rough')
+        inter.setNormalStiffness(1e8)
         inter.createInteraction()
 
         topFace = nucleus.topFaces
@@ -207,9 +215,9 @@ def caeAnalysis(p):
 	##STEP
     myModel.StaticStep(name='Load',previous='Initial',timePeriod=p['timePeriod'],initialInc=p['initialInc'],nlgeom=ON,
     maxInc=p['maxInc'],minInc=p['minInc'],maxNumInc=10000)
-    myModel.steps['Load'].control.setValues(allowPropagation=OFF, resetDefaultValues=OFF, discontinuous=ON)
-    #,timeIncrementation=(0, 0, 0, 0, 10.0, 0, 12.0, 0, 0, 0, 50.0))
-    #I0=4(nb equ ite),Ir=8,Ip=9,Ic=16,Il=10,Ig=4,Is=12,Ia=5,Ij=6,It=3,Isc=50 cannot change if discontinuous ON
+    myModel.steps['Load'].control.setValues(allowPropagation=OFF, resetDefaultValues=OFF, discontinuous=ON, timeIncrementation=(8, 10, 9., 16., 10.0, 4., 12., 10.0, 5., 3., 50.0))
+    #I0=8(nb equ ite - cannot change if discontinuous ON),Ir=10 (nb conseq equ ite - cannot change if discontinuous ON),Ip=9,Ic=16,Il=10,Ig=4,Is=12,Ia=5,Ij=5,It=3,Isc=50
+    myModel.steps['Load'].solverControl.setValues(allowPropagation=OFF, resetDefaultValues=OFF, maxIterations=10)
 	
     ##LOAD/BC - after step as the step names are used!!!
     myTopSurface = myAssembly.Surface(name='topSurface',side1Faces=topFace)
@@ -225,7 +233,7 @@ def caeAnalysis(p):
         distributionType=TOTAL_FORCE)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'vertDispl':
-        myModel.DisplacementBC(name='Displ',createStepName='Load',region=tuple(topFace),u1=0.,u2=-p['displ'],u3=0.)
+        myModel.DisplacementBC(name='Displ',createStepName='Load',region=tuple(topFace),u1=0.,u2=0.,u3=-p['displ'], localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     elif p['load'] == 'PressurePlane':# magnitude provided = concentrated FORCE on the rigid plane
         import regionToolset
@@ -248,7 +256,7 @@ def caeAnalysis(p):
         follower=ON)
         myModel.DisplacementBC(name='BC-2', createStepName='Load', region=region, u1=0.0, u3=0.0, ur1=0.0, ur2=0.0, ur3=0.0,
         distributionType=UNIFORM)
-        if p['interfaceType'] != 'Tie':myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u3=-p['displ'],localCsys=datumCyl)
+        myModel.DisplacementBC(name='noRadialDispl',createStepName='Load',region=tuple(topFace),u1=0.,u2=0.,localCsys=datumCyl)
         myModel.PinnedBC(name='Fixed',createStepName='Load',region=tuple(bottomFace))
     else:#load only in internal pressure
         if p['internalPressure']:
@@ -256,7 +264,7 @@ def caeAnalysis(p):
             myModel.XsymmBC(name='Fixed',createStepName='Load',region=tuple(bottomFace),localCsys=datumCyl)
         else: raise Exception("no BC's have been defined!!")
     if p['internalPressure']:
-        myInnerSurface = myAssembly.Surface(name='innerSurface',side1Faces=(annulus.innerFaces[0],annulus.innerFaces[1],))
+        myInnerSurface = myAssembly.Surface(name='innerSurface',side1Faces=tuple(annulus.innerFaces[i] for i in range(p['nbCut'][0])))
         myModel.Pressure(name='intPressure',createStepName='Load',region=myInnerSurface,magnitude=p['internalPressure'],
         distributionType=UNIFORM)
     	
