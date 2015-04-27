@@ -18,8 +18,8 @@ from caeModules import *
 def getParameters(_p={}):
     param = {}
     #GEOMETRY
-    param['nbLamellae'] = 10
-    param['nbCut'] = [2,2,2,2,2,2,2,2,2,2]
+    param['nbLamellae'] = 2
+    param['nbCut'] = [2,2]
     param['innerRadius'] = 12.#mm
     param['outerRadius'] = 20.#mm
     param['height'] = 12.#mm
@@ -69,7 +69,7 @@ def getParameters(_p={}):
         kappa=0. for perfectly oriented; 1/3 for isotropic
     '''
     param['holzapfelParameters'] = (0.022, 9.09e-4, 23.92, 1045.7, 0.)#ovine anterior
-    param['fiberDirection'] = [math.pi/6.,-math.pi/6.]#list of fiber angles in the (theta,z) plane
+    param['fiberDirection'] = [math.pi/6.,math.pi/6.,-math.pi/6.,-math.pi/6.]#list of fibre angles in the (theta,z) plane
     #INTERACTIONS
     param['interfaceType'] = 'Tie'                  #'Frictionless', 'Tie', 'Friction'
     param['contactStiffness'] = 1.                  #irrelevant if param['interfaceType']=='Tie'
@@ -92,7 +92,11 @@ def getParameters(_p={}):
     param['internalPressure'] = None
     #NUCLEUS
     param['withNucleus'] = False
-    param['compressiveModulus'] = 0.4
+    param['compressiveModulus'] = 0.4# bovine caudal discs Perie et al JoB 2005 (Iatridis team)
+    #PUNCH CUT
+    param['punchCut'] = False
+    param['punchCentre'] = (0,0,0)
+    param['punchRadius'] = 11/2.
     #JOB
     param['modelName'] = 'defaultName'
     param['scratchDir'] = '.'
@@ -101,6 +105,12 @@ def getParameters(_p={}):
     param.update(_p)
     return param
 #-----------------------------------------------------
+def getDistanceBetweenCentres(centreA,centreB):
+    dx = centreA[0]-centreB[0]
+    dy = centreA[1]-centreB[1]
+    dz = centreA[2]-centreB[2]
+    distance = math.sqrt(dx*dx+dy*dy+dz*dz)
+    return distance
 #-----------------------------------------------------
 def caeAnalysis(p):
     # check parameter consistency
@@ -110,7 +120,25 @@ def caeAnalysis(p):
     myModel = mdb.Model(p['modelName'])
     abaqusTools.deleteDefaultModel()
     myAssembly = myModel.rootAssembly
-
+    
+    #check if creating annulusCut and NucleusCut makes sense (ie check if there is indeed a cut to make with the dimensions given)
+    cutAnnulus = False
+    cutNucleus = False
+    if p['punchCut']:
+        D = getDistanceBetweenCentres((0,0,0),p['punchCentre']) 
+        if D<p['punchRadius']+p['innerRadius']:
+            cutNucleus = True
+            if D>p['punchRadius']-p['innerRadius']:
+                cutAnnulus = True      
+        
+        if (cutAnnulus or cutNucleus):
+            punch =  genericIVDCreation.CylNucleus(myModel)
+            punch.setCentre(p['punchCentre'])
+            punch.setRadius(p['punchRadius'])
+            punch.setHeight(p['height'])
+            punch.setName('punch')
+            #punchInstance,punchPart = punch.create()
+    
     annulus =  genericIVDCreation.CylAnnulus(myModel)
     annulus.setInnerRadius(p['innerRadius'])
     annulus.setOuterRadius(p['outerRadius'])
@@ -119,7 +147,9 @@ def caeAnalysis(p):
     annulus.setNbCuts(p['nbCut'])
     if p['matType'] != 'Holzapfel':
         annulus.setToIncompressible()#will use hybrid elements for almost incompressible material - check if can be used for Holzapfel
-    annulusParts = annulus.create()
+    if cutAnnulus:
+        annulus.cutWithPunch(punch)
+    annulusParts,cutAnnulusPart = annulus.create()
 
     matNames = list()
     directions = list()
@@ -128,8 +158,13 @@ def caeAnalysis(p):
         for arc in range(p['nbCut'][cyl]):
             sectionName = 'annulus%i_section%i'%(cyl,arc)
             domainNb = int(sum(p['nbCut'][0:cyl]))+arc
-            middlePt = annulus.midPoint[domainNb]
-            pickedCells2 = thisPart.cells.findAt((middlePt,))
+            if cutAnnulusPart[cyl][arc]:# if the lamella is completely severed then two points are needed to define the cells
+                lamellarThickness = (p['outerRadius']-p['innerRadius'])/p['nbLamellae']
+                r0 = p['innerRadius']+(p['outerRadius']-p['innerRadius'])/p['nbLamellae']*cyl
+                alpha = 360./p['nbCut'][cyl]*(arc+1-0.01)*math.pi/180.
+                middlePt = ((r0*math.cos(alpha),p['height']/2.,r0*math.sin(alpha)),)
+                pickedCells2 = (thisPart.cells.findAt(middlePt),thisPart.cells.findAt((annulus.midPoint[domainNb],)))
+            else: pickedCells2 = thisPart.cells.findAt((annulus.midPoint[domainNb],))
             # create material
             matName = 'annulus%i'%domainNb
             if isinstance(p['holzapfelParameters'],list) and len(p['holzapfelParameters']) == int(sum(p['nbCut'])):#there is one set of parameters per cut
@@ -142,7 +177,7 @@ def caeAnalysis(p):
                     fibreAngle = p['fiberDirection'][domainNb]
                 elif isinstance(p['fiberDirection'],float) and p['nbLamellae']<2:
                     fibreAngle = p['fiberDirection']
-                else: raise("parameter 'fiberDirection' of unknown type or wrong length")
+                else: raise Exception("parameter 'fiberDirection' of unknown type or wrong length")
                 matNames.append(matName)
                 directions.append((0.,math.cos(fibreAngle),math.sin(fibreAngle)))
             
@@ -154,6 +189,7 @@ def caeAnalysis(p):
             # coordinate system
             csysCyl = thisPart.DatumCsysByThreePoints(coordSysType=CYLINDRICAL,origin=(0.,0.,0.),point1=(1.,0.,0.),point2=(0.,0.,-1.))
             # assign material
+            #abaqusTools.assignMaterialToPart(matName,thisPart,myModel,orientation=csysCyl)
             abaqusTools.assignMaterialToPartition(matName,thisPart,sectionName,pickedCells2,myModel,orientation=csysCyl)
             
     if p['withNucleus']:
@@ -161,6 +197,8 @@ def caeAnalysis(p):
         nucleus =  genericIVDCreation.CylNucleus(myModel,annulus.bottomFaces,annulus.topFaces)
         nucleus.setRadius(p['innerRadius'])
         nucleus.setHeight(p['height'])
+        if cutNucleus:
+            nucleus.cutWithPunch(punch)
         nucleusInstance,nucleusPart = nucleus.create()
         # material - compressive modulus H~2G (Neo-Hookean model of sig = H/2(lambda-1/lambda)) and C10=G/2  ==> C10 = H/4
         myMat = myModel.Material(name='nucleus')
@@ -194,8 +232,10 @@ def caeAnalysis(p):
         for nb in range(1,p['nbLamellae']):
             domainNb = int(sum(p['nbCut'][0:nb]))
             outerFaces = tuple(annulus.outerFaces[domainNb-i-1] for i in range(p['nbCut'][nb-1]))
+            if any(cutAnnulusPart[cyl]):outerFaces2 = tuple(annulus.outerFaces2[domainNb-i-1] for i in range(p['nbCut'][nb-1]))
             innerFaces = tuple(annulus.innerFaces[domainNb+i] for i in range(p['nbCut'][nb]))
-            masterSurface = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFaces)
+            if any(cutAnnulusPart[cyl]):masterSurface = myAssembly.Surface(name='master%d'%(nb),side1Faces=(outerFaces,outerFaces2))
+            else:masterSurface = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFaces)
             slaveSurface = myAssembly.Surface(name='slave%d'%(nb),side1Faces=innerFaces)
             from interactions import Interactions
             inter = Interactions(myModel)
@@ -269,8 +309,8 @@ def caeAnalysis(p):
         distributionType=UNIFORM)
     	
     ## OUTPUT REQUESTS
-    fieldVariable = ('S', 'LE', 'U', 'RT', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
-    myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
+    #fieldVariable = ('S', 'LE', 'U', 'RT', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
+    #myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     
     ## JOB
     from jobCreation import JobDefinition

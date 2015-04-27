@@ -39,12 +39,19 @@ def getEandNu(holzapfelParam):
     E = 8./3.*k+4*(1+nu)*c10
     return E,nu
 #-----------------------------------------------------
+def getDistanceBetweenCentres(centreA,centreB):
+    dx = centreA[0]-centreB[0]
+    dy = centreA[1]-centreB[1]
+    dz = centreA[2]-centreB[2]
+    distance = math.sqrt(dx*dx+dy*dy+dz*dz)
+    return distance
+#-----------------------------------------------------
 class CylAnnulus:
     '''
     Class to define the geometry of a meshed cylindrical annulus with partitions to assign different properties around the circumference
     '''
     def __init__(self,abqModel,bottomFaces = list(),topFaces = list()):
-        self.centre = (0.,0.)
+        self.centre = (0.,0.,0.)
         self.innerRadius = 2.
         self.outerRadius = 3.
         self.discHeight = 2.
@@ -73,39 +80,55 @@ class CylAnnulus:
         self.NbCuts = cuts
     def setToIncompressible(self):
         self.isIncompressible = True
-    def cutWithPunch(self,punchPart):
-        self.punch = punchPart
+    def cutWithPunch(self,punchTool):
+        self.punch = punchTool
+        # try: self.abqModel.rootAssembly.instances[self.punch.name]
+        # except: raise Exception('punch instance has not been defined to make cut')
         
     def create(self):
         # check parameter consistency
         assert (len(self.NbCuts) == self.NbLamellae), "nbCut is a list of number of cut for each lamellae, its length must be equal to NbLamellae!!"
         assert not any(360%i for i in self.NbCuts), "number of cuts per part must be a divider of 360!!"
         
-        from abaqusConstants import CYLINDRICAL
+        cutAnnulus = [[False]*self.NbCuts[n] for n in range(self.NbLamellae)]
         lamellarThickness = (self.outerRadius-self.innerRadius)/self.NbLamellae
         myAssembly = self.abqModel.rootAssembly
-
+        if self.punch: punchInstance,punchPart = self.punch.create()
         self.innerFaces = list()
+        self.innerFaces2 = list()
         self.outerFaces = list()
+        self.outerFaces2 = list()
         self.midPoint = list()
         parts = list()
         for cyl in range(self.NbLamellae):
             #geometry
-            angle = 360/self.NbCuts[cyl]
+            angle = 360./self.NbCuts[cyl]
             cylinderName = 'annulus%d'%(cyl)
             r0 = self.innerRadius+lamellarThickness*cyl
             r1 = self.innerRadius+lamellarThickness*(cyl+1)
+            cutLamella = False
+            if self.punch:
+                #check if creating annulusCut makes sense (ie check if there is indeed a cut to make with the dimensions given)
+                D = getDistanceBetweenCentres((0,0,0),self.punch.centre)
+                if D>r0-self.punch.radius:
+                    cutLamella = True
             rm = (r1+r0)/2.
-            thisPart = createHollowCylinderPart(self.centre,r0,r1,self.discHeight,cylinderName,self.abqModel)
+            thisPart = createHollowCylinderPart((0.,0.),r0,r1,self.discHeight,cylinderName,self.abqModel)
             bottomPoint = list()
             topPoint = list()
             outerPoint = list()
+            outerPoint2 = list()
+            middlePt2 = list()
             for arc in range(self.NbCuts[cyl]):
-                middlePt = (r0*math.cos(angle*(arc+.5)*math.pi/180),self.discHeight/2,r0*math.sin(angle*(arc+.5)*math.pi/180))
-                bottomPoint.append((rm*math.cos(angle*(arc+.5)*math.pi/180),0,rm*math.sin(angle*(arc+.5)*math.pi/180)))
-                topPoint.append((rm*math.cos(angle*(arc+.5)*math.pi/180),self.discHeight,rm*math.sin(angle*(arc+.5)*math.pi/180)))
+                alpha = angle*(arc+0.01)*math.pi/180
+                alpha2 = angle*(arc+0.99)*math.pi/180
+                middlePt = (r0*math.cos(alpha),self.discHeight/2.,r0*math.sin(alpha))
+                middlePt2.append((r0*math.cos(alpha2),self.discHeight/2.,r0*math.sin(alpha2)))
+                bottomPoint.append((rm*math.cos(alpha),0,rm*math.sin(alpha)))
+                topPoint.append((rm*math.cos(alpha),self.discHeight,rm*math.sin(alpha)))
                 self.midPoint.append(middlePt)
-                outerPoint.append((r1*math.cos(angle*(arc+.5)*math.pi/180),self.discHeight/2,r1*math.sin(angle*(arc+.5)*math.pi/180)))
+                outerPoint.append((r1*math.cos(alpha),self.discHeight/2,r1*math.sin(alpha)))
+                outerPoint2.append((r1*math.cos(alpha2),self.discHeight/2,r1*math.sin(alpha2)))
                 pt1 = thisPart.DatumPointByCoordinate(coords=(r0*math.cos(angle*(arc+1)*math.pi/180),0,r0*math.sin(angle*(arc+1)*math.pi/180)))
                 pt2 = thisPart.DatumPointByCoordinate(coords=(r1*math.cos(angle*(arc+1)*math.pi/180),0,r1*math.sin(angle*(arc+1)*math.pi/180)))
                 pt3 = thisPart.DatumPointByCoordinate(coords=(r1*math.cos(angle*(arc+1)*math.pi/180),self.discHeight,r1*math.sin(angle*(arc+1)*math.pi/180)))
@@ -113,19 +136,35 @@ class CylAnnulus:
                 pickedCells = thisPart.cells.findAt((middlePt,))
                 thisPart.PartitionCellByPatchNCorners(cell=pickedCells[0],cornerPoints=[thisPart.datums[pt1.id],
                 thisPart.datums[pt2.id], thisPart.datums[pt3.id], thisPart.datums[pt4.id]])
-            thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly)
-            if self.punch:
-                cuttingInstance = abaqusTools.createInstanceAndAddtoAssembly(self.punch,myAssembly)
-                thisInstance = myAssembly.InstanceFromBooleanCut(name='cutNucleus', instanceToBeCut=thisInstance, cuttingInstances=(cuttingInstance, ), originalInstances=SUPPRESS)
+                thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly,translate = self.centre)
+                if cutLamella:
+                    gamma = math.acos(self.punch.centre[0]/D)# angle locating the centre of the punch
+                    beta = math.acos((r0*r0+D*D-self.punch.radius*self.punch.radius)/(2.*r0*D))# angle, from the centre of the punch to the intersection between punch and lamella
+                    if (gamma+beta>alpha) and (gamma-beta>alpha): cutAnnulus[cyl][arc] = True
+            if cutLamella:
+                cutAnnulusName = 'cutAnnulus%d'%(cyl)
+                thisInstance = myAssembly.InstanceFromBooleanCut(name=cutAnnulusName, instanceToBeCut=thisInstance, cuttingInstances=(punchInstance, ), originalInstances=SUPPRESS)
+                myAssembly.makeIndependent(instances=(thisInstance, ))
+                thisPart = self.abqModel.parts[cutAnnulusName]
+                if self.NbLamellae>1:myAssembly.features[punchInstance.name].resume()
+
             ptMeshC = list()
             ptMeshW = list()
             for arc in range(self.NbCuts[cyl]):
+                alpha = angle*(arc+0.01)*math.pi/180
                 self.bottomFaces.append(thisInstance.faces.findAt((bottomPoint[arc],)))
                 self.topFaces.append(thisInstance.faces.findAt((topPoint[arc],)))
+                if cutLamella:
+                    self.innerFaces2.append(thisInstance.faces.findAt((middlePt2[arc],)))
+                    self.outerFaces2.append(thisInstance.faces.findAt((outerPoint2[arc],)))#outerPoint2[arc]
+                else:
+                    self.innerFaces2.append([])
+                    self.outerFaces2.append([])#outerPoint2[arc]
+
                 self.innerFaces.append(thisInstance.faces.findAt((self.midPoint[int(sum(self.NbCuts[0:cyl]))+arc],)))
                 self.outerFaces.append(thisInstance.faces.findAt((outerPoint[arc],)))
-                ptMeshC.append((r1*math.cos(angle*(arc+.5)*math.pi/180),0,r1*math.sin(angle*(arc+.5)*math.pi/180)))
-                ptMeshC.append((r1*math.cos(angle*(arc+.5)*math.pi/180),self.discHeight,r1*math.sin(angle*(arc+.5)*math.pi/180)))
+                ptMeshC.append((r1*math.cos(alpha),0,r1*math.sin(alpha)))
+                ptMeshC.append((r1*math.cos(alpha),self.discHeight,r1*math.sin(alpha)))
                 ptMeshW.append((rm*math.cos(angle*arc*math.pi/180),0,rm*math.sin(angle*arc*math.pi/180)))
                 ptMeshW.append((rm*math.cos(angle*arc*math.pi/180),self.discHeight,rm*math.sin(angle*arc*math.pi/180)))
             
@@ -135,23 +174,27 @@ class CylAnnulus:
             ctrl = list()
             for n in range(2*self.NbCuts[cyl]):
                 edge.append(thisInstance.edges.findAt((ptMeshW[n],)))
-                ctrl.append(max(int(20/(self.NbLamellae)),3))#number of radial elements per lamellae
+                ctrlValue = max(int(20/(self.NbLamellae)),3)
+                ctrl.append(ctrlValue)#number of radial elements per lamellae
                 edge.append(thisInstance.edges.findAt((ptMeshC[n],)))
-                ctrl.append(int(100./self.NbCuts[cyl]))#number of circumferential elements=80
+                ctrlValue = int(100./self.NbCuts[cyl])#number of circumferential elements=100
+                if self.punch:ctrlValue = int(ctrlValue/3)
+                ctrl.append(ctrlValue)
             if self.isIncompressible:
                 elemType=setElementType('C3D8RH')
             else:
                 elemType=setElementType('C3D8R')
+
             abaqusTools.assignElemtypeAndMesh(thisInstance,myAssembly,elemType,control=ctrl,meshType='seedEdgeByNumber',edges=edge)
             ## SETS FOR OUTPUT ANALYSIS
             if cyl == 0:#one vertical edge on the most inner lamella
                 intVerticalEdge = thisInstance.edges.getSequenceFromMask(mask=('[#1 ]', ), )
                 myAssembly.Set(edges=intVerticalEdge, name='intVerticalSegment')
-            if cyl == 0 or cyl == self.NbLamellae:#one vertical edge on the most outer lamella (which can be the most inner one when only one is defined!)
+            if cyl == self.NbLamellae-1:#one vertical edge on the most outer lamella
                 extVerticalEdge = thisInstance.edges.getSequenceFromMask(mask=('[#4 ]', ), )
                 myAssembly.Set(edges=extVerticalEdge, name='extVerticalSegment')
             parts.append(thisPart)
-        return parts
+        return parts,cutAnnulus
 
 #-----------------------------------------------------
 class CylNucleus:
@@ -159,7 +202,7 @@ class CylNucleus:
     Class to define the geometry of a meshed cylindrical nucleus
     '''
     def __init__(self,abqModel,bottomFaces = list(),topFaces = list()):
-        self.centre = (0.,0.)
+        self.centre = (0.,0.,0.)
         self.radius = 2.
         self.discHeight = 2.
         self.isIncompressible = True
@@ -167,8 +210,9 @@ class CylNucleus:
         self.topFaces = topFaces
         self.abqModel = abqModel
         self.punch = None
+        self.name = 'nucleus'
         
-    def setCenter(self,centre):
+    def setCentre(self,centre):
         self.centre = centre
     def setRadius(self,radius):
         self.radius = radius
@@ -176,23 +220,36 @@ class CylNucleus:
         self.discHeight = height
     def setToCompressible(self):
         self.isIncompressible = False
-    def cutWithPunch(self,punchPart):
-        self.punch = punchPart
+    def setName(self,name):
+        self.name = name
+    def cutWithPunch(self,punchTool):
+        self.punch = punchTool
+#        try: self.abqModel.rootAssembly.instances[self.punch.name]
+#        except: raise Exception('punch instance has not been defined to make cut')
 
     def create(self):
         myAssembly = self.abqModel.rootAssembly
         #geometry
-        rm = self.radius/2.
-        thisPart = createHollowCylinderPart(self.centre,0.,self.radius,self.discHeight,'nucleus',self.abqModel)
+        rm = 0.95*self.radius
+        thisPart = createHollowCylinderPart((0.,0.),0.,self.radius,self.discHeight,self.name,self.abqModel)
         bottomPoint = (rm*math.cos(math.pi),0,rm*math.sin(math.pi))
         topPoint = (rm*math.cos(math.pi),self.discHeight,rm*math.sin(math.pi))
         self.outerPoint = (self.radius*math.cos(math.pi),self.discHeight/2,self.radius*math.sin(math.pi))
-        #instance and faces
-        thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly)
+        cutNucleus = False
         if self.punch:
-            cuttingInstance = abaqusTools.createInstanceAndAddtoAssembly(self.punch,myAssembly)
-            thisInstance = myAssembly.InstanceFromBooleanCut(name='cutNucleus', instanceToBeCut=thisInstance, cuttingInstances=(cuttingInstance, ), originalInstances=SUPPRESS)
-
+            #check if creating annulusCut makes sense (ie check if there is indeed a cut to make with the dimensions given)
+            D = getDistanceBetweenCentres((0,0,0),self.punch.centre) 
+            if D<self.punch.radius+self.radius:
+                cutNucleus = True  
+                punchInstance,punchPart = self.punch.create()
+        #instance and faces
+        thisInstance = abaqusTools.createInstanceAndAddtoAssembly(thisPart,myAssembly,translate = self.centre)
+        meshControl = 0.5
+        if cutNucleus:
+            thisInstance = myAssembly.InstanceFromBooleanCut(name='cutNucleus', instanceToBeCut=thisInstance, cuttingInstances=(punchInstance, ), originalInstances=SUPPRESS)
+            myAssembly.makeIndependent(instances=(thisInstance, ))
+            thisPart = self.abqModel.parts['cutNucleus']
+            meshControl = 0.4
         self.bottomFaces.append(thisInstance.faces.findAt((bottomPoint,)))
         self.topFaces.append(thisInstance.faces.findAt((topPoint,)))
         #mesh
@@ -200,28 +257,9 @@ class CylNucleus:
             elemType=setElementType('C3D8RH')
         else:
             elemType=setElementType('C3D8R')
-        abaqusTools.assignElemtypeAndMesh(thisInstance,myAssembly,elemType,control=.5)
+        abaqusTools.assignElemtypeAndMesh(thisInstance,myAssembly,elemType,control=meshControl)
         return thisInstance,thisPart
-#-----------------------------------------------------
-class cylHole:
-    '''
-    Class to define the geometry of a cylinder punch
-    '''
-    def __init__(self,abqModel):
-        self.centre = (0.,0.)
-        self.radius = 2.
-        self.height = 2.
-        self.abqModel = abqModel
-    def setCenter(self,centre):
-        self.centre = centre
-    def setRadius(self,radius):
-        self.radius = radius
-    def setHeight(self,height):
-        self.height = height
-    def create(self):
-        #geometry
-        thisPart = createHollowCylinderPart(self.centre,0.,self.radius,self.height,'hole',self.abqModel)
-        return thisPart
+
 #-----------------------------------------------------
 class annulusMaterial:
     def __init__(self,matName,matType,model):
