@@ -1,10 +1,9 @@
 import abaqusPythonTools.extractors as ext
+import abaqusPythonTools.odbTools as odbTools
 import abaqusPythonTools.valueExtractorClass as valueExtractor
 import math
 import numpy as np
-import np.linalg as linalg
-#
-# !! only for quadrilateral meshes as ext.computeMeanOverElement assumes there are 4 nodes/IP
+import numpy.linalg as linalg
 #
 #-----------------------------------------------------
 # LOCAL DIRECTIONS
@@ -12,44 +11,49 @@ import np.linalg as linalg
 def getFinalLD_1(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_1')
+    values.setComponent('LOCALDIR1_1')
     values.setCoordSystem(sysC)
     return values.getFinalValue_ElementNodal()
 def getFinalLD_2(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_2')
+    values.setComponent('LOCALDIR1_2')
     values.setCoordSystem(sysC)
     return values.getFinalValue_ElementNodal()
 def getFinalLD_3(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_3')
+    values.setComponent('LOCALDIR1_3')
     values.setCoordSystem(sysC)
     return values.getFinalValue_ElementNodal()
 def getLD_1(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_1')
+    values.setComponent('LOCALDIR1_1')
     values.setCoordSystem(sysC)
     return values.getEvolution_ElementNodal()
 def getLD_2(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_2')
+    values.setComponent('LOCALDIR1_2')
     values.setCoordSystem(sysC)
     return values.getEvolution_ElementNodal()
 def getLD_3(odb,setName,sysC=None):
     values = valueExtractor.ValueExtractor(odb,setName)
     values.setField('LOCALDIR1')
-    values.setComponant('LOCALDIR1_3')
+    values.setComponent('LOCALDIR1_3')
     values.setCoordSystem(sysC)
     return values.getEvolution_ElementNodal()
 #-----------------------------------------------------
-def getFinalFiberDirection(odb,setName,sysC):
-    LD1 = ext.computeMeanOverElement(getFinalLD_1(odb,setName,sysC))
-    LD2 = ext.computeMeanOverElement(getFinalLD_2(odb,setName,sysC))
-    LD3 = ext.computeMeanOverElement(getFinalLD_3(odb,setName,sysC))
+def getFinalFiberDirection(odb,setName,sysC,tetMesh=False):
+    if tetMesh:
+        LD1 = getFinalLD_1(odb,setName,sysC)
+        LD2 = getFinalLD_2(odb,setName,sysC)
+        LD3 = getFinalLD_3(odb,setName,sysC)
+    else:
+        LD1 = odbTools.computeMeanOverElement(getFinalLD_1(odb,setName,sysC))
+        LD2 = odbTools.computeMeanOverElement(getFinalLD_2(odb,setName,sysC))
+        LD3 = odbTools.computeMeanOverElement(getFinalLD_3(odb,setName,sysC))
     nbNodes = len(LD3)
     fiberDirectionVector = np.empty((3,nbNodes))
     fiberDirectionVector[0,:] = LD1
@@ -57,13 +61,21 @@ def getFinalFiberDirection(odb,setName,sysC):
     fiberDirectionVector[2,:] = LD3
     return fiberDirectionVector
 #-----------------------------------------------------
-def getFinalLogStrain(odb,setName,sysC):
-    E11 = ext.computeMeanOverElement(ext.getFinalE_11(odb,setName,sysC))
-    E22 = ext.computeMeanOverElement(ext.getFinalE_22(odb,setName,sysC))
-    E33 = ext.computeMeanOverElement(ext.getFinalE_33(odb,setName,sysC))
-    E12 = ext.computeMeanOverElement(ext.getFinalE_12(odb,setName,sysC))
-    E13 = ext.computeMeanOverElement(ext.getFinalE_13(odb,setName,sysC))
-    E23 = ext.computeMeanOverElement(ext.getFinalE_23(odb,setName,sysC))
+def getFinalLogStrain(odb,setName,sysC,tetMesh=False):
+    if tetMesh:
+        E11 = ext.getFinalE_11(odb,setName,sysC)
+        E22 = ext.getFinalE_22(odb,setName,sysC)
+        E33 = ext.getFinalE_33(odb,setName,sysC)
+        E12 = ext.getFinalE_12(odb,setName,sysC)
+        E13 = ext.getFinalE_13(odb,setName,sysC)
+        E23 = ext.getFinalE_23(odb,setName,sysC)
+    else:
+        E11 = odbTools.computeMeanOverElement(ext.getFinalE_11(odb,setName,sysC))
+        E22 = odbTools.computeMeanOverElement(ext.getFinalE_22(odb,setName,sysC))
+        E33 = odbTools.computeMeanOverElement(ext.getFinalE_33(odb,setName,sysC))
+        E12 = odbTools.computeMeanOverElement(ext.getFinalE_12(odb,setName,sysC))
+        E13 = odbTools.computeMeanOverElement(ext.getFinalE_13(odb,setName,sysC))
+        E23 = odbTools.computeMeanOverElement(ext.getFinalE_23(odb,setName,sysC))
     nbNodes = len(E23)
     strainTensor = np.empty((3,3,nbNodes))
     strainTensor[0,0,] = E11
@@ -99,9 +111,20 @@ def getStrainV(logStrainV):
     return V
 #-----------------------------------------------------
 #-----------------------------------------------------
-def computeFiberStretch(odb,setName,sysC):
+def computeFiberStretchQuadMesh(odb,setName,sysC):
     direction = getFinalFiberDirection(odb,setName,sysC)#a vector (for each node)
     logVstrain = getFinalLogStrain(odb,setName,sysC)# a tensor (for each node)
+    strainV = getStrainV(logVstrain)
+    invLCG = getInvLeftCauchyGreen(strainV)
+    stretch = list()
+    for node in range(int(direction.shape[1])):
+        invSquareStretch = np.dot(direction[:,node],np.dot(invLCG[:,:,node],direction[:,node]))
+        stretch.append(math.sqrt(1./invSquareStretch))
+    return stretch
+#-----------------------------------------------------
+def computeFiberStretchTetMesh(odb,setName,sysC):
+    direction = getFinalFiberDirection(odb,setName,sysC,tetMesh=True)#a vector (for each node)
+    logVstrain = getFinalLogStrain(odb,setName,sysC,tetMesh=True)# a tensor (for each node)
     strainV = getStrainV(logVstrain)
     invLCG = getInvLeftCauchyGreen(strainV)
     stretch = list()

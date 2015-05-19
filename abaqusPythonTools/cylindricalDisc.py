@@ -25,50 +25,68 @@ def getParameters(_p={}):
     param['height'] = 12.#mm
     #MATERIAL
     param['matType'] = 'neoHooke'#'Holzapfel' or 'neoHooke' or 'Yeoh'
-    '''holzapfelParameters: C10,D,k1,k2,kappa (MPa, MPa-1,MPa,-,-)
+    param['holzapfelParameters'] = (0.022, 9.09e-4, 23.92, 1045.7, 0.)#ovine anterior
+    '''
+    holzapfelParameters: C10,D,k1,k2,kappa (MPa, MPa-1,MPa,-,-)
+        D: bulk modulus, K=2/D, K=2200MPa (considering compressibility equivalent to that of water)
         ==========
         HUMAN DATA
         ==========
-        C10 linear fit ground matrix shear stress/shear strain (Little_JMBBM_2010) in MPa
-          fit at max apparent linear shear strain: 2*C10 = 0.0377 (r^2 = 0.9817)
-        D: bulk modulus, K=2/D --> PhD@ETH K=2200MPa
         k1,k2 Holzapfel fit fiber Stretch/PK2 in MPa [C10 equivalent for initial fibre stretch only!)
           Holzapfel_2005
           coef1 - dorsalExternal1  k1,k2 = 1.9317   77.1463 r^2 = 0.9988 rms = 2.70%
-                  equivalent (GM + fibres) E = 5.9315 MPa (see matlabScripts/plotFullStress)
+                  equivalent (GM + fibres) E = 5.9315 MPa (see matlabScripts/modelFit/plotFullStress)
                   equivalent (GM + fibres) nu = 0.4996 (0.5-E/6K)
-                  equivalent (fibres) C10 = 0.9762 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 0.9762 MPa (see matlabScripts/modelFit/plotFullStress)
           coef2 - dorsalExternal2  k1,k2 = 2.4136   72.8267 r^2 = 0.9960 rms = 4.68%
                   equivalent (GM + fibres) E = 7.3585 MPa
                   equivalent (GM + fibres) nu = 0.4994
-                  equivalent (fibres) C10 = 1.2142 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 1.2142 MPa (see matlabScripts/modelFit/plotFullStress)
           coef3 - dorsalInternal1  k1,k2 = 0.2115   13.0878 r^2 = 0.9962 rms = 2.91%
                   equivalent (GM + fibres) E = 0.6748 MPa
                   equivalent (GM + fibres) nu = 0.4999
-                  equivalent (fibres) C10 = 0.0998 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 0.0998 MPa (see matlabScripts/modelFit/plotFullStress)
           coef4 - dorsalInternal2  k1,k2 = 0.3259   11.0381 r^2 = 0.9943 rms = 3.57%
                   equivalent (GM + fibres) E = 0.9968 MPa
                   equivalent (GM + fibres) nu = 0.4999
-                  equivalent (fibres) C10 = 0.1535 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 0.1535 MPa (see matlabScripts/modelFit/plotFullStress)
           coef5 - vlExternal       k1,k2 = 8.2963  319.0410 r^2 = 0.9865 rms = 9.22%
                   equivalent (GM + fibres) E = 32.9071 MPa
                   equivalent (GM + fibres) nu = 0.4975
-                  equivalent (fibres) C10 = 5.4810 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 5.4810 MPa (see matlabScripts/modelFit/plotFullStress)
           coef6 - vlInternal1      k1,k2 = 1.4536   40.4437 r^2 = 0.9984 rms = 1.81%
                   equivalent (GM + fibres) E = 4.3129 MPa
                   equivalent (GM + fibres) nu = 0.4997
-                  equivalent (fibres) C10 = 0.7063 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 0.7063 MPa (see matlabScripts/modelFit/plotFullStress)
           coef7 - vlInternal2      k1,k2 = 0.8804   54.1728 r^2 = 0.9960 rms = 2.41%
                   equivalent (GM + fibres) E = 2.6799 MPa
                   equivalent (GM + fibres) nu = 0.4998
-                  equivalent (fibres) C10 = 0.4340 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 0.4340 MPa (see matlabScripts/modelFit/plotFullStress)
           coef8 - Eberlein_CM_2004 k1,k2 = 3.0000   45 (also used in PhD@ETH) 
                   equivalent (GM + fibres) E = 8.8627 MPa
                   equivalent (GM + fibres) nu = 0.4993
-                  equivalent (fibres) C10 = 1.4651 MPa (see matlabScripts/plotFullStress)
+                  equivalent (fibres) C10 = 1.4651 MPa (see matlabScripts/modelFit/plotFullStress)
         kappa=0. for perfectly oriented; 1/3 for isotropic
-    '''
-    param['holzapfelParameters'] = (0.022, 9.09e-4, 23.92, 1045.7, 0.)#ovine anterior
+        C10 linear fit ground matrix shear stress/shear strain (Little_JMBBM_2010) in MPa; - ovine data!!!
+          fit at max apparent linear shear strain: 2*C10 = 0.0377 (r^2 = 0.9817)
+        ==========
+        OVINE DATA
+        ==========
+        Fit an holzapfel model on a markert model (see matlabScripts/modelFit/fromReutlingerFitToHolzapfelModel)
+        Markert model from Reutlinger 2014 JMBBM
+        anterior lumbar discs
+        k1 = 23.92, k2 = 1045.7         
+        C10 linear fit ground matrix shear stress/shear strain (Little_JMBBM_2010) in MPa;
+          fit at max apparent linear shear strain: 2*C10 = 0.0377 (r^2 = 0.9817)
+        ==========
+        BOVINE DATA
+        ==========
+        Data used in Cortes 2012 BMM
+        caudal bovine discs
+        k1 = 2.46 +/- 3.06, k2 = 2.11 +/- 2.16
+        C10 from ground matrix radial shear modulus (Jacobs 2011 JMBBM) in MPa;
+          C10 = 0.0075
+        '''
     param['fiberDirection'] = [math.pi/6.,math.pi/6.,-math.pi/6.,-math.pi/6.]#list of fibre angles in the (theta,z) plane
     #INTERACTIONS
     param['interfaceType'] = 'Tie'                  #'Frictionless', 'Tie', 'Friction'
