@@ -1,14 +1,16 @@
 import parameterFit1Parr
 import os
 
-feModelDir = os.path.join(os.path.join(os.path.dirname(os.getcwd()),'ovineTetsGSFactor'),'ovineValidation')
+mainDir = os.path.join(os.path.dirname(os.getcwd()),'Sami')
+feModelDir = os.path.join(mainDir,'calibrationFilesPorcine')
+expDir = r'C:\Users\menmmen\Documents\othersWork\Sami_porcineBone\stiffnessFiles'
 
 optiParam = {}
-optiParam['maxEval'] = 40 # max number of function evaluation in the optimisation process !!there is more than one evalutation per iteration as the jacobian as to be computed!!
-optiParam['epsfcn'] = .1 # step taken to compute the jacobian by a finite difference method
+optiParam['maxEval'] = 80 # max number of function evaluation in the optimisation process !!there is more than one evalutation per iteration as the jacobian as to be computed!!
+optiParam['epsfcn'] = .005 # step taken to compute the jacobian by a finite difference method
 optiParam['ftol'] = 1e-6 # tolerance on the function value
 
-bounds = (1e-4,0.1)
+bounds = (0.001,0.02)
 
 #perform optimisation
-p,fVal,info = parameterFit1Parr.main(feModelDir, feModelDir, pBounds=bounds, options=optiParam)
+p,fVal,info = parameterFit1Parr.main(expDir, feModelDir, pBounds=bounds, options=optiParam)

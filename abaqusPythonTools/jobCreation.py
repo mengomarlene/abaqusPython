@@ -44,7 +44,7 @@ class JobDefinition:
                 inputFile = introduceFiberDirection(self.directions,self.name)
             newJobName = self.name+'FibresIn'
             ## !! cannot create newModel with newInputfile and newJob on newModel as ModelFromInputFile does NOT keep fibre orientation
-            ## ==> is probably going to be a problem to do a restart if needed...
+            ## ==> this is probably going to be a problem to do a restart if needed...
             myNewJob = mdb.JobFromInputFile(newJobName,inputFileName=inputFile)
         else:
             myNewJob = myJob

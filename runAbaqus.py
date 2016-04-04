@@ -5,7 +5,9 @@ import toolbox
 extToKeep = ['inp','odb','msg','rpy','cae','txt','sta','dat']
 defaultdirs = ['..\\myModels\\tryPython','..\\myModels\\tryInp']
 
-sys.path.append(os.path.dirname(os.getcwd()))
+masterDir = os.path.dirname(os.getcwd())
+sys.path.append(masterDir)
+sys.path.append(os.path.dirname(masterDir))
 
 def runAbaqusCmd(dirs,cmd,keep=False,gui=False):
     keepFName = ' '

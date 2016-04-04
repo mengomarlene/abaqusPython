@@ -4,7 +4,6 @@ import subprocess
 
 verbose = False
 saveIntermediateValues = True
-NFeval = 0
 NIter = 0
 
 def computeFEData(p,modelsDir):
@@ -43,7 +42,7 @@ def runModel(p,modelScript,modelsDir):
     # run abaqus postPro -- this is the part where I did not find a way to work on a different workspace for each abaqus run
     cmd = 'abaqus python runAbaqus.py postPro %s'%(filePath)
     pCall2 = subprocess.call(cmd, shell=True)
-    if pCall2:#the post pro function has ot run properly
+    if pCall2:#the post pro function has not run properly
         writeErrorFile(workspace,modelScript,p,pCall1,pCall2)
         raise Exception("!! something has gone wrong, check notRun.txt")
         return 0
@@ -55,12 +54,12 @@ def runModel(p,modelScript,modelsDir):
 
 def writeErrorFile(workspace,modelScript,p,pCall1,pCall2='not run yet'):
     feErrorFile = os.path.join(workspace,'notRun.txt')
-    global NFeval
+    global NIter
     with open(feErrorFile, 'w') as file:
         file.write('running abaqus cae on %s returned %s\n'%(toolbox.getFileName(modelScript), pCall1))
         file.write('running post pro on %s returned %s\n'%(toolbox.getFileName(modelScript), pCall2))
         file.write('parameter inputs: %s\n'%(p))
-        file.write('run number: %s\n'%(NFeval))
+        file.write('run number: %s\n'%(NIter))
 
 def plotValues(fittedValues, modelScript, expData):
     baseName = os.path.dirname(os.path.abspath(__file__))
@@ -77,19 +76,19 @@ def plotValues(fittedValues, modelScript, expData):
     if not verbose:plt.show()
     return fittedValues
 
-def saveValues(p, feData, value, no='final'):
+def saveValues(p, feData, names, value, no='final'):
     baseName = os.path.dirname(os.path.abspath(__file__))
     feDataFile = os.path.join(baseName,'verboseValues_%i.ascii'%no)
     with open(feDataFile, 'w') as file:
         file.write('run number: %s\n'%(no))
         file.write('parameter inputs: %s\n'%(p))
         file.write('least square error %s\n'%value)
-        file.write('\n'.join('%f ' %(x[0]) for x in feData))
+        file.write('\n'.join('%s: %f ' %(name,data[0]) for data,name in zip(feData,names)))
 
 def residuals(p, modelsDir, expDir):
     ''' residuals(p, expData) computes the diff (in a least square sense) between experimental data and FE data (function of p)
         p: set of parameters to optimize
-        expData: experimental data to fit, should be a 2D array (x,y)
+        expDir: directory experimental data to fit
     '''
     # compute FE data function of parameters only - should return a 2D array (x,y) of floats
     # ---------------
@@ -104,33 +103,26 @@ def residuals(p, modelsDir, expDir):
         # add difference in list
         if data[0]: diff.append((expData - data[0])/expData)
     lstSq = 0
-    for value in diff: lstSq+= value**2/(len(diff))
-    global NFeval
-    NFeval += 1
-    if saveIntermediateValues: saveValues(p, feData, lstSq, NFeval)
-    return lstSq    
-
-def callbackF(p):
-    global NIter,NFeval
+    for value in diff: lstSq+= value**2
+    lstSq /= len(diff)
+    lstSq = lstSq**0.5
+    global NIter
     NIter += 1
-    if verbose: print 'Nb Iteration: %i, Nb Evaluation: %i, parameter inputs: %s\n'%(NIter,NFeval,p)
-    baseName = os.path.dirname(os.path.abspath(__file__))
-    callbackFile = os.path.join(baseName,'callbackValues_%i.ascii'%NIter)
-    with open(callbackFile, 'w') as file:
-        file.write('iteration number: %i\n'%(NIter))
-        file.write('evaluation number: %i\n'%(NFeval))
-        file.write('parameter inputs: %s\n'%(p))
+    if saveIntermediateValues: saveValues(p, feData,modelNames, lstSq, NIter)
+    return lstSq
 
 def getOptiParam(modelsDir, expDir, optiParam, pBounds=None):
+    global NIter
     from scipy.optimize import minimize_scalar
     opts = {'maxiter':optiParam['maxEval'],'disp':True}
     import numpy as np
-    res = minimize_scalar(residuals, bounds=pBounds, args=(modelsDir, expDir), tol=optiParam['ftol'], method='bounded')#, options=opts)
+    res = minimize_scalar(residuals, bounds=pBounds, args=(modelsDir, expDir), tol=optiParam['ftol'], method='bounded', options=opts)
     pLSQ = res.x
     fVal = res.fun
     d = {}
     d['funcalls']= res.nfev
     d['task']= res.message
+    d['nIte']= NIter
     if verbose: print d
     return pLSQ,fVal,d
 

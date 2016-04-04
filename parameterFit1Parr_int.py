@@ -17,7 +17,7 @@ def computeFEData(p,modelsDir,modelType='Int'):
     else:
         output = list()
         for model in modelList:
-            out1job = runModel(p,model,modelsDir)#?? will they run one after the other??? - NO!
+            out1job = runModel(p,model,modelsDir)
             output.append(out1job[0])
     return output,modelList
 
@@ -42,7 +42,7 @@ def runModel(p,modelScript,modelsDir):
     # run abaqus postPro -- this is the part where I did not find a way to work on a different workspace for each abaqus run
     cmd = 'abaqus python runAbaqus.py postPro %s'%(filePath)
     pCall2 = subprocess.call(cmd, shell=True)
-    if pCall2:#the post pro function has ot run properly
+    if pCall2:#the post pro function has not run properly
         writeErrorFile(workspace,modelScript,p,pCall1,pCall2)
         raise Exception("!! something has gone wrong, check notRun.txt")
         return 0
@@ -102,7 +102,7 @@ def residuals(p, modelsDir, expDir, modelType='Int'):
         #expData = 0
         with open(dataFile, 'r') as file: expData =  float(file.readline().split()[0])
         # add difference in list
-        if data[0]:diff.append((expData - data[0])/expData)
+        if data[0]: diff.append((expData - data[0])/expData)
     lstSq = 0
     for value in diff: lstSq+= value**2/(len(diff))
     global NFeval

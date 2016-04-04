@@ -110,8 +110,9 @@ def residuals(p, modelScript, expData, withBounds=False):
         expDispl = math.sqrt(expData[0]*expData[0]+expData[1]*expData[1])
         diff.append(feDispl - expDispl)
     lstSq = 0
-    for value in diff:
-        lstSq+= value**2/(len(feData[0]))
+    for value in diff: lstSq+= value**2
+	lstSq /= len(feData[0])
+	lstSq = lstSq**0.5
     global NFeval
     NFeval += 1
     if saveIntermediateValues: 

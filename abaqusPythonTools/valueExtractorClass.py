@@ -80,12 +80,12 @@ class ValueExtractor:
                 if 'INSTANCE'  in self.setName:#set name is a part set
                     iName = self.setName.split('.')[0]
                     iSetName = self.setName.split('.')[1]
-                    print assembly.instances[iName].nodeSets
                     try:
                         subset = assembly.instances[iName].nodeSets[iSetName]
                     except:
                         subset = assembly.instances[iName].nodeSets[iSetName.upper()]
                 else:#set name is an assembly set
+                    #print assembly.nodeSets
                     try:
                         subset = assembly.nodeSets[self.setName]
                     except:
