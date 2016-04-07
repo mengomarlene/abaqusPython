@@ -1,5 +1,8 @@
 # -*- coding: mbcs -*-
-import odbTools
+odbToolbox = r"D:\myWork\procedures\postPro4Abq_VC"
+import sys
+sys.path.append(odbToolbox)
+import postProTools.odbTools as odbTools
 
 elToCellType = {}
 #abaqus doc on element type AND  http://www.vtk.org/doc/nightly/html/vtkCellType_8h_source.html

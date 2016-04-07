@@ -1,5 +1,8 @@
 # -*- coding: mbcs -*-
-import odbTools
+odbToolbox = r"D:\myWork\procedures\postPro4Abq_VC"
+import sys
+sys.path.append(odbToolbox)
+import postProTools.odbTools as odbTools
 
 def writeVtk(vtkFile,nodeCoord,eleConnection,eleType,cdata = None,pdata = None,cdataName=None,pdataName=None):
     nbNodes = len(nodeCoord)

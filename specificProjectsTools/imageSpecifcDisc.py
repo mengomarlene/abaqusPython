@@ -5,7 +5,7 @@ backwardCompatibility.setValues(reportDeprecated=False)
 from abaqusConstants import *
 from caeModules import *    
 import mesh
-import abaqusTools
+import abaqusPythonTools.abaqusTools as abaqusTools
 import os, math
 
 def getParameters(_p={}):
@@ -151,7 +151,7 @@ def createAnalysis(param):
         ##CONSTRAINTS - same for all interfaces - could be changed depending on the interface name!!
         if 'homogeneous' not in param['inpFile'] and 'Bonded' not in param['inpFile'] and 'bonded' not in param['inpFile'] :
             for interactionName in myModel.interactionProperties.keys():
-                from interactions import Interactions
+                from abaqusPythonTools.interactions import Interactions
                 inter = Interactions(myModel)
                 inter.setName(interactionName)
                 if param['interfaceType'] == 'Friction':
@@ -173,7 +173,7 @@ def createAnalysis(param):
     # myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
 
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(param['modelName'])
     myJobDef.setScratchDir(param['scratchDir'])
     if param['matType'] == 'Holzapfel':

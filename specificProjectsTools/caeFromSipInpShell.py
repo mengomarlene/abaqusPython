@@ -5,7 +5,10 @@ backwardCompatibility.setValues(reportDeprecated=False)
 from abaqusConstants import *
 from caeModules import *    
 import mesh
-import abaqusTools
+import abaqusPythonTools.abaqusTools as abaqusTools
+Im2MeshToolbox = r"D:\myWork\procedures\2DImage2Mesh_VC"
+import sys
+sys.path.append(Im2MeshToolbox)
 from sipShell2Abq2D import shellTo2DGeo
 import os, math
 
@@ -172,7 +175,7 @@ def createAnalysis(param):
         slaveName = 'SF_%s_WITH_%s'%(slMaCouple[0],slMaCouple[1])
         myMaInstance = myAssembly.instances['%s_instance'%slMaCouple[1]]
         mySlInstance = myAssembly.instances['%s_instance'%slMaCouple[0]]
-        from interactions import Interactions
+        from abaqusPythonTools.interactions import Interactions
         inter = Interactions(myModel)
         inter.setName('interaction_%i'%nbInteraction)
         if param['interfaceType'] == 'Tie':
@@ -199,7 +202,7 @@ def createAnalysis(param):
     #fieldVariable = ('S', 'LE', 'U', 'RF', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
     #myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(param['modelName'])
     myJobDef.setScratchDir(param['scratchDir'])
     if param['matType'] == 'Holzapfel':

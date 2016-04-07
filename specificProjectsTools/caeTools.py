@@ -5,7 +5,9 @@ caeTools
 ## classical python modules
 import math
 ## my abaqus module
-import abaqusTools
+import sys,os
+sys.path.append(os.path.dirname('__file__'))
+import abaqusPythonTools.abaqusTools as abaqusTools
 
 ## default abaqus modules
 from abaqus import *
@@ -298,7 +300,7 @@ def analysisWithPartitionCylinders(p):
         outerNucleus = instances[-1].faces.findAt((outerPoint,))
         masterSurface = myAssembly.Surface(name='innerAnnulus',side1Faces=innerAnnulus)
         slaveSurface = myAssembly.Surface(name='outerNucleus',side1Faces=outerNucleus)
-        from interactions import Interactions
+        from abaqusPythonTools.interactions import Interactions
         inter = Interactions(myModel)
         inter.setMasterSlave(masterSurface,slaveSurface)
         inter.setName('annulusNucleusInterface')
@@ -312,7 +314,7 @@ def analysisWithPartitionCylinders(p):
             innerFaces = tuple(innerFace[domainNb+i] for i in range(p['nbCut'][nb]))
             masterSurface = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFaces)
             slaveSurface = myAssembly.Surface(name='slave%d'%(nb),side1Faces=innerFaces)
-            from interactions import Interactions
+            from abaqusPythonTools.interactions import Interactions
             inter = Interactions(myModel)
             inter.setMasterSlave(masterSurface,slaveSurface)
             inter.setName('interface%d'%(nb))
@@ -394,7 +396,7 @@ def analysisWithPartitionCylinders(p):
     #myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(p['modelName'])
     myJobDef.setScratchDir(p['scratchDir'])
     if not p['stupidMaterial']:
@@ -511,7 +513,7 @@ def analysisWithPartialCylinders(p):
             innerFaces = tuple(innerFace[domainNb+i] for i in range(p['nbCut'][nb]))
             masterRegion = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFaces)
             slaveRegion = myAssembly.Surface(name='slave%d'%(nb),side1Faces=innerFaces)
-            from interactions import Interactions
+            from abaqusPythonTools.interactions import Interactions
             inter = Interactions(myModel)
             inter.setMasterSlave(masterRegion,slaveRegion)
             inter.setName('interface%d'%(nb))
@@ -581,7 +583,7 @@ def analysisWithPartialCylinders(p):
     fieldVariable = ('S', 'LE', 'U', 'RT', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
     #myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(p['modelName'])
     myJobDef.setScratchDir(p['scratchDir'])
     if not p['stupidMaterial']:
@@ -687,7 +689,7 @@ def analysisWithCylinders(p):
         for nb in range(1,p['nbParts']):
             masterRegion = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFace[nb-1])
             slaveRegion = myAssembly.Surface(name='slave%d'%(nb),side1Faces=innerFace[nb])
-            from interactions import Interactions
+            from abaqusPythonTools.interactions import Interactions
             inter = Interactions(myModel)
             inter.setMasterSlave(masterRegion,slaveRegion)
             inter.setName('interface%d'%(nb))
@@ -756,7 +758,7 @@ def analysisWithCylinders(p):
     fieldVariable = ('S', 'LE', 'U', 'RF', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
     myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(p['modelName'])
     myJobDef.setScratchDir(p['scratchDir'])
     if not p['stupidMaterial'] and (p['matType'] == 'Holzapfel'):
@@ -883,7 +885,7 @@ def lamellarRectangle(p):
     #fieldVariable = ('S', 'LE', 'U', 'RT', 'P', 'CSTRESS', 'CDISP', 'CFORCE')
     #myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(name)
     myJobDef.setScratchDir(p['scratchDir'])
     if not p['stupidMaterial']:
@@ -965,7 +967,7 @@ def analysisWithRectangles(p):
         for nb in range(1,p['nbParts']):
             masterRegion = myAssembly.Surface(name='master%d'%(nb),side1Faces=outerFace[nb-1])
             slaveRegion = myAssembly.Surface(name='slave%d'%(nb),side1Faces=innerFace[nb])
-            from interactions import Interactions
+            from abaqusPythonTools.interactions import Interactions
             inter = Interactions(myModel)
             inter.setMasterSlave(masterRegion,slaveRegion)
             inter.setName('interface%d'%(nb))
@@ -995,7 +997,7 @@ def analysisWithRectangles(p):
     myAssembly.Set(faces=tuple(lowerFace), name='lowerFace')
     myAssembly.Set(faces=tuple(upperFace), name='upperFace')
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(p['modelName'])
     myJobDef.setScratchDir(p['scratchDir'])
     if not p['stupidMaterial'] and (p['matType'] == 'Holzapfel'):

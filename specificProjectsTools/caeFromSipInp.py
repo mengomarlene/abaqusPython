@@ -5,7 +5,7 @@ backwardCompatibility.setValues(reportDeprecated=False)
 from abaqusConstants import *
 from caeModules import *    
 import mesh
-import abaqusTools
+import abaqusPythonTools.abaqusTools as abaqusTools
 import os, math
 
 def getParameters(_p={}):
@@ -134,7 +134,7 @@ def createAnalysisFromSipExport(param):
         ##CONSTRAINTS - same for all interfaces - could be changed depending on the interface name!!
         if 'Contact' in param['sipInpFile']:
             for interactionName in myModel.interactionProperties.keys():
-                from interactions import Interactions
+                from abaqusPythonTools.interactions import Interactions
                 inter = Interactions(myModel)
                 inter.setName(interactionName)
                 if param['interfaceType'] == 'Tie':
@@ -156,7 +156,7 @@ def createAnalysisFromSipExport(param):
     if param['allowRestart']:
         myModel.steps['displ'].Restart(numberIntervals=5,timeMarks=OFF,overlay=ON)
     ## JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(param['modelName'])
     myJobDef.setScratchDir(param['scratchDir'])
     if param['matType'] == 'Holzapfel':

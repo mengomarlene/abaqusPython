@@ -5,7 +5,7 @@ backwardCompatibility.setValues(reportDeprecated=False)
 from abaqusConstants import *
 from caeModules import *    
 import mesh
-import abaqusTools
+import abaqusPythonTools.abaqusTools as abaqusTools
 import os, math
 
 def getParameters(_p={}):
@@ -110,7 +110,7 @@ def createAnalysisFromSipExport(param):
         ##CONSTRAINTS - same for all interfaces - could be changed depending on the interface name!!
         if 'Contact' in param['sipInpFile']:
             for interactionName in myModel.interactionProperties.keys():                
-                from interactions import Interactions
+                from abaqusPythonTools.interactions import Interactions
                 inter = Interactions(myModel)
                 inter.setName(interactionName)
                 if param['interfaceType'] == 'Friction':
@@ -122,7 +122,7 @@ def createAnalysisFromSipExport(param):
     myModel.fieldOutputRequests['F-Output-1'].setValues(variables=fieldVariable)
 
     ##JOB
-    from jobCreation import JobDefinition
+    from abaqusPythonTools.jobCreation import JobDefinition
     myJobDef = JobDefinition(param['modelName'])
     myJobDef.setScratchDir(param['scratchDir'])
     myJob = myJobDef.create()

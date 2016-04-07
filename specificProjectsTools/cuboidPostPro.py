@@ -1,6 +1,9 @@
-import abaqusPythonTools.odbTools as odbTools
-import abaqusPythonTools.contactExtractors as cExt
-import abaqusPythonTools.extractors as ext
+odbToolbox = r"D:\myWork\procedures\postPro4Abq_VC"
+import sys
+sys.path.append(odbToolbox)
+import postProTools.odbTools as odbTools
+import postProTools.extractors as ext
+import postProTools.contactExtractors as cExt
 import os
 import numpy as np
 

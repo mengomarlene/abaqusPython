@@ -1,6 +1,9 @@
-import abaqusPythonTools.extractors as ext
+odbToolbox = r"D:\myWork\procedures\postPro4Abq_VC"
+import sys
+sys.path.append(odbToolbox)
+import postProTools.odbTools as odbTools
+import postProTools.extractors as ext
 import abaqusPythonTools.geometricTools as geoTools
-import abaqusPythonTools.odbTools as odbTools
 import os
 
 def getCylDatum(myOdb):

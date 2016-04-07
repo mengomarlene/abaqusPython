@@ -9,13 +9,13 @@ sys.path.append(rundir)
 import toolbox
 
 def postPro(jobName):
-    import abaqusPythonTools.beanShapedPostPro as beanShapedPostPro
+    import specificProjectsTools.beanShapedPostPro as beanShapedPostPro
     beanShapedPostPro.appliedDisplExtractors(jobName)
 
 __modpath__ = toolbox.modulePath(postPro)
 
 def getParameters(_p={}):
-    import abaqusPythonTools.beanShaped as beanShaped
+    import specificProjectsTools.beanShaped as beanShaped
     param = {}
     param['modelName'] = toolbox.getFileName(__modpath__)
     param['interfaceType'] = 'CohesiveFriction' #'Frictionless', 'Friction'
@@ -25,7 +25,7 @@ def getParameters(_p={}):
 
 if __name__ == '__main__':
     import abaqusPythonTools.abaqusTools as abaqusTools
-    import abaqusPythonTools.beanShaped as beanShaped
+    import specificProjectsTools.beanShaped as beanShaped
     job,mdb = beanShaped.createAnalysis(getParameters())
-    #abaqusTools.runAnalysis(job)
+    abaqusTools.runAnalysis(job)
     mdb.close()
